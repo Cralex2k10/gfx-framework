@@ -28,7 +28,7 @@ Tema1::~Tema1()
 
 void Tema1::Init()
 {
-    glm::ivec2 resolution = window->GetResolution();
+	glm::ivec2 resolution = window->GetResolution();    // get resolution of the window
     auto camera = GetSceneCamera();
     camera->SetOrthographic(0, (float)resolution.x, 0, (float)resolution.y, 0.01f, 400);
     camera->SetPosition(glm::vec3(0, 0, 50));
@@ -36,24 +36,28 @@ void Tema1::Init()
     camera->Update();
     GetCameraInput()->SetActive(false);
 
+    // player always starts first for convenience
+    // TODO: make first turn random after implementing opponent AI
+    isPlayerTurn = true;
+
     glm::vec3 corner = glm::vec3(0, 0, 0);
-    float squareSide = 100;
+    float squareSide = 1;
 
     // TODO(student): Compute coordinates of a square's center, and store
     // then in the `cx` and `cy` class variables (see the header). Use
     // `corner` and `squareSide`. These two class variables will be used
     // in the `Update()` function. Think about it, why do you need them?
 
-    cx = 50;
-    cy = 50;
+    cx = corner.x + squareSide / 2;
+    cy = corner.y + squareSide / 2;
 
     // Initialize tx and ty (the translation steps)
-    translateX = 0;
-    translateY = 0;
+    translateX = resolution.x * 0.195f;
+    translateY = resolution.y * 0.25f;
 
     // Initialize sx and sy (the scale factors)
-    scaleX = 1;
-    scaleY = 1;
+    scaleX = resolution.x * 0.8f;
+    scaleY = resolution.y * 0.12f;
 
     // Initialize car coordonates
     carX = 50;
@@ -63,21 +67,59 @@ void Tema1::Init()
     // Initialize angularStep
     angularStep = 0;
 
-    Mesh* square1 = object2D::CreateSquare("square1", corner, squareSide, glm::vec3(1, 0, 0), true);
-    AddMeshToList(square1);
+    // Northern Realms Deck
+    // DEVNOTE: Try to keep very few healers for balancing reasons
+    // total: 22 cards  -- TODO: later add x3 Decoy as DECOY type and x2 Commander's Horn as HORN (?) type
+    // total strength = 149
+    std::vector<Card*> northernRealmsDeck = {
+        new Card("Geralt of Rivia", ATK, MELEE, 15),
+        new Card("Ciri", HEAL, MELEE, 15),
+        new Card("Yennefer of Vengerberg", ATK, RANGED, 7),
+        new Card("Triss Merigold", DEF, RANGED, 7),
+        new Card("Philippa Eilhart", ATK, RANGED, 10),
+        new Card("Vernon Roche", ATK, MELEE, 10),
+        new Card("John Natalis", DEF, MELEE, 10),
+        new Card("Esterad Thyssen", ATK, MELEE, 10),
+        new Card("Myserious ELF", HEAL, MELEE, 5), // TODO: turn into spy later
+        new Card("Villentretenmerth", ATK, MELEE, 7),
+        new Card("Catapult", ATK, SIEGE, 8),
+        new Card("Catapult", ATK, SIEGE, 8),
+        new Card("Prince Stennis", DEF, MELEE, 5),  // TODO: turn into spy later
+        new Card("Crinfrid Reavers Dragon Hunter", DEF, RANGED, 5), // TODO: implement doubling score mechanic for doubles
+        new Card("Crinfrid Reavers Dragon Hunter", DEF, RANGED, 5),
+        new Card("Crinfrid Reavers Dragon Hunter", DEF, RANGED, 5),
+        new Card("Dun Banner Medic", HEAL, SIEGE, 5),
+        new Card("Sigismund Dijkstra", DEF, MELEE, 4),
+        new Card("Blue Stripes Commando", ATK, MELEE, 4),
+        new Card("Blue Stripes Commando", ATK, MELEE, 4),
+        new Card("Blue Stripes Commando", ATK, MELEE, 4),
+        new Card("Thaler", ATK, SIEGE, 1)   // TODO: turn into spy later
+    };
 
-    Mesh* square2 = object2D::CreateSquare("square2", corner, squareSide, glm::vec3(0, 1, 0));
-    AddMeshToList(square2);
+    // player lanes
+    Mesh* playerSquare = object2D::CreateSquare("playerSquare", corner, squareSide, glm::vec3(0, 0, 1), true);
+    AddMeshToList(playerSquare);
 
-    Mesh* square3 = object2D::CreateSquare("square3", corner, squareSide, glm::vec3(0, 0, 1));
-    AddMeshToList(square3);
+	Mesh* playerHand = object2D::CreateSquare("playerHand", corner, squareSide, glm::vec3(0.32f, 0.24f, 0.16f), true);
+    AddMeshToList(playerHand);
 
-    Mesh* square4 = object2D::CreateSquare("square4", corner, squareSide, glm::vec3(0, 1, 1), true);
-    AddMeshToList(square4);
+    Mesh* statsBar = object2D::CreateSquare("statsBar", corner, squareSide, glm::vec3(0.32f, 0.24f, 0.16f), true);
+    AddMeshToList(statsBar);
 
-    Mesh* square5 = object2D::CreateSquare("square5", corner, squareSide, glm::vec3(1, 0, 1), true);
-    AddMeshToList(square5);
-}
+	Lane* Hand = new Lane("Hand", true, playerSquare);
+
+	Lane* melee1 = new Lane("melee1", true, playerSquare);
+    Lane* range1 = new Lane("ran1", true, playerSquare);
+    Lane* siege1 = new Lane("sieg1", true, playerSquare);
+
+	// enemy lanes
+	Mesh* enemySquare = object2D::CreateSquare("enemySquare", corner, squareSide, glm::vec3(1, 0, 0), true);
+	AddMeshToList(enemySquare);
+
+	Lane* melee2 = new Lane("melee2", false, enemySquare);
+	Lane* range2 = new Lane("ran2", false, enemySquare);
+	Lane* siege2 = new Lane("sieg2", false, enemySquare);
+ }
 
 
 void Tema1::FrameStart()
@@ -94,89 +136,53 @@ void Tema1::FrameStart()
 
 void Tema1::Update(float deltaTimeSeconds)
 {
-    // TODO(student): Update steps for translation, rotation and scale,
-    // in order to create animations. Use the class variables in the
-    // class header, and if you need more of them to complete the task,
-    // add them over there!
+	glm::ivec2 resolution = window->GetResolution();
 
-    //int tx = cx, ty = cy;
-    if (translateY < 310 && ascending) {
-        translateX += 100 * deltaTimeSeconds;
-        translateY += 100 * deltaTimeSeconds;
-    }
-    else
-        ascending = false;
-    if (translateY > 190 && !ascending) {
-        translateX -= 100 * deltaTimeSeconds;
-        translateY -= 100 * deltaTimeSeconds;
-    }
-    else
-        ascending = true;
+    // render board -- should remain static
 
+    float offset = 0.005f * resolution.y;
+
+	// render stats bar
+    float barWidth= 0.19f * resolution.x - offset;
+	float barHeight = resolution.y - 2 * offset;
+
+    // TODO: fix the scale: the scale should happen from right to left from the bottom right corner of the status bar
+    // currently: status bar does not scale proportionally
     modelMatrix = glm::mat3(1);
-    modelMatrix *= transform2D::Translate(translateY, translateX);
-    // TODO(student): Create animations by multiplying the current
-    // transform matrix with the matrices you just implemented.
-    // Remember, the last matrix in the chain will take effect first!
+	modelMatrix *= transform2D::Translate(barWidth + offset, offset); // move pivot to bottom right
+    //modelMatrix *= transform2D::Translate(offset, offset);
+    modelMatrix *= transform2D::Scale(barWidth, barHeight);
+    modelMatrix *= transform2D::Translate(-1, 0);   // move pivot back (original squareSide = 1, NOT barWidth) -- doesnt do anything rn
+    RenderMesh2D(meshes["statsBar"], shaders["VertexColor"], modelMatrix);
 
-    RenderMesh2D(meshes["square1"], shaders["VertexColor"], modelMatrix);
-
+    // render player hand
     modelMatrix = glm::mat3(1);
+    modelMatrix *= transform2D::Translate(translateX, offset);
+    modelMatrix *= transform2D::Scale(scaleX, 2 * scaleY);
+    RenderMesh2D(meshes["playerHand"], shaders["VertexColor"], modelMatrix);
 
-    if (scaleY < 1.5f && growing) {
-        scaleX += 1 * deltaTimeSeconds;
-        scaleY += 1 * deltaTimeSeconds;
+    // render player lanes
+    for (int i = 0; i < 3; i++) {
+        modelMatrix = glm::mat3(1);
+        modelMatrix *= transform2D::Translate(translateX, translateY + i * (scaleY + offset));
+        modelMatrix *= transform2D::Scale(scaleX, scaleY);
+        RenderMesh2D(meshes["playerSquare"], shaders["VertexColor"], modelMatrix);
     }
-    else
-        growing = false;
-    if (scaleY > 1 && !growing) {
-        scaleY -= 1 * deltaTimeSeconds;
-        scaleX -= 1 * deltaTimeSeconds;
+
+	// render enemy lanes
+    for (int i = 3; i < 6; i++) {
+        modelMatrix = glm::mat3(1);
+        modelMatrix *= transform2D::Translate(translateX, translateY + i * (scaleY + offset));
+        modelMatrix *= transform2D::Scale(scaleX, scaleY);
+        RenderMesh2D(meshes["enemySquare"], shaders["VertexColor"], modelMatrix);
     }
-    else
-        growing = true;
 
-    modelMatrix *= transform2D::Translate(500, 300);
-    modelMatrix *= transform2D::Translate(cx, cy);
-    modelMatrix *= transform2D::Scale(scaleX, scaleY);
-    modelMatrix *= transform2D::Translate(-cx, -cy);
-    // TODO(student): Create animations by multiplying the current
-    // transform matrix with the matrices you just implemented
-    // Remember, the last matrix in the chain will take effect first!
+    //modelMatrix = glm::mat3(1);
 
-    RenderMesh2D(meshes["square2"], shaders["VertexColor"], modelMatrix);
+    //modelMatrix *= transform2D::Translate(translateX, translateY);
+    //modelMatrix *= transform2D::Scale(scaleX, scaleY);
 
-    modelMatrix = glm::mat3(1);
-    angularStep += 3 * deltaTimeSeconds;
-
-    modelMatrix *= transform2D::Translate(800, 250);
-    modelMatrix *= transform2D::Translate(cx, cy);
-    modelMatrix *= transform2D::Rotate(angularStep);
-    modelMatrix *= transform2D::Translate(-cx, -cy);
-
-    // TODO(student): Create animations by multiplying the current
-    // transform matrix with the matrices you just implemented
-    // Remember, the last matrix in the chain will take effect first!
-
-    RenderMesh2D(meshes["square3"], shaders["VertexColor"], modelMatrix);
-
-
-    modelMatrix = glm::mat3(1);
-    modelMatrix *= transform2D::Translate(carX, carY);
-    modelMatrix *= transform2D::Translate(cx, cy);
-    modelMatrix *= transform2D::Rotate(rotationAngle);
-    modelMatrix *= transform2D::Translate(-cx, -cy);
-
-    modelMatrix *= transform2D::Translate(cx, cy);
-    modelMatrix *= transform2D::Scale(0.8f, 0.5f);
-    modelMatrix *= transform2D::Translate(-cx, -cy);
-    RenderMesh2D(meshes["square4"], shaders["VertexColor"], modelMatrix);
-
-    // just keep using the car's modelMatrix to track the transform
-    modelMatrix *= transform2D::Translate(0, cy);
-    modelMatrix *= transform2D::Scale(0.3f, 1.2f);
-    modelMatrix *= transform2D::Translate(0, -cy);
-    RenderMesh2D(meshes["square5"], shaders["VertexColor"], modelMatrix);
+    //RenderMesh2D(meshes["square1"], shaders["VertexColor"], modelMatrix);
 }
 
 
@@ -193,34 +199,7 @@ void Tema1::FrameEnd()
 
 void Tema1::OnInputUpdate(float deltaTime, int mods)
 {
-    //float speed = 300 * deltaTime;
-    //float rotationSpeed = 6 * deltaTime;
 
-    //if (window->KeyHold(GLFW_KEY_W)) {
-    //    //if (rotationAngle < glm::radians(90.0f))
-    //    carX += cos(rotationAngle) * speed;
-    //    carY += sin(rotationAngle) * speed;
-
-    //    //carY += cos(rotationAngle) * speed;
-    //    //if (rotationAngle < glm::radians(90)) {
-    //    //    rotationAngle += 30 * deltaTime;
-    //    //    rotationAngle = glm::radians(rotationAngle);
-    //    //}
-
-    //    //rotationAngle = 90;
-    //    //rotationAngle = glm::radians(rotationAngle);
-    //}
-
-    //if (window->KeyHold(GLFW_KEY_S)) {
-    //    carX -= cos(rotationAngle) * speed;
-    //    carY -= sin(rotationAngle) * speed;
-    //}
-    //if (window->KeyHold(GLFW_KEY_D)) {
-    //    rotationAngle -= rotationSpeed;
-    //}
-    //if (window->KeyHold(GLFW_KEY_A)) {
-    //    rotationAngle += rotationSpeed;
-    //}
 }
 
 
@@ -261,4 +240,18 @@ void Tema1::OnInputUpdate(float deltaTime, int mods)
 
     void Tema1::OnWindowResize(int width, int height)
     {
+        // keeps aspect ratio 16:9 so i dont have Wide Foltest Walking
+        isResizing = true;
+
+        if (width != lastWidth) {
+			lastWidth = width;
+            window->SetSize(width, 9 * width / 16);
+        }
+        else
+			if (height != lastHeight) {
+                lastHeight = height;
+				window->SetSize(16 * height / 9, height);
+			}
+
+        isResizing = false;
     }

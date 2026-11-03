@@ -2,9 +2,68 @@
 
 #include "components/simple_scene.h"
 
-
 namespace m1
 {
+    enum cardAction {
+        ATK,    // TODO: red
+        DEF,    // TODO: blue
+        HEAL   // TODO: green
+    };
+
+    enum cardType {
+        MELEE,
+        RANGED,
+        SIEGE
+    };
+
+    // inline means the compiler replaces the method header with the method code at every turn
+    // DEVNOTE: read this if you get lost again: https://www.geeksforgeeks.org/cpp/inline-functions-cpp/
+    inline std::string cardTypeToString(cardType type) {
+        switch (type) {
+            case MELEE: 
+                return "melee";
+            case RANGED:
+                return "ranged";
+            case SIEGE:
+                return "siege";
+        }
+    }
+
+    class Card : public Mesh
+    {
+    public:
+        bool isSelected;
+        bool used;
+        std::string name;
+        std::string action;
+        std::string type;
+        int value;
+
+        Card(const std::string& name, cardAction action, cardType type, int value);//, const std::vector<VertexFormat>& vertices, const std::vector<unsigned short>& indices);
+        ~Card();
+
+        void buildCard(std::string& type);
+    };
+
+    class Lane : public Mesh
+    {
+    public:
+        bool isPlayer;
+        Mesh* shape;
+        std::string type;
+        std::vector<Card*> cards;
+
+        int totalAtk, totalDef, totalHeal;
+
+        Lane(const std::string& type, bool isPlayer, Mesh* shape);
+        ~Lane();
+
+        bool isInLane(float x, float y);
+        glm::vec2 getLaneMiddle();
+        void addCard(Card* card);
+        void removeCard(Card* card);
+    };
+
     class Tema1 : public gfxc::SimpleScene
     {
     public:
@@ -43,5 +102,12 @@ namespace m1
 
         float carX, carY;
         float rotationAngle;
+
+        // variables to ensure aspect ratio 
+        float lastWidth, lastHeight;
+        // TODO: consider removing isResizing if obsolete
+        bool isResizing;
+
+        bool isPlayerTurn;
     };
 }   // namespace m1
