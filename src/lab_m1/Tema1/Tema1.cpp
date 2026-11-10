@@ -38,7 +38,7 @@ void Tema1::Init()
 
     // player always starts first for convenience
     // TODO: make first turn random after implementing opponent AI
-    isPlayerTurn = true;
+    playerTurn = true;
 
     glm::vec3 corner = glm::vec3(0, 0, 0);
     float squareSide = 1;
@@ -48,8 +48,8 @@ void Tema1::Init()
     // `corner` and `squareSide`. These two class variables will be used
     // in the `Update()` function. Think about it, why do you need them?
 
-    cx = corner.x + squareSide / 2;
-    cy = corner.y + squareSide / 2;
+    cx = cardSize / 2;
+    cy = cardSize / 2;
 
     // Initialize tx and ty (the translation steps)
     translateX = resolution.x * 0.195f;
@@ -67,11 +67,15 @@ void Tema1::Init()
     // Initialize angularStep
     angularStep = 0;
 
+    // check if mouse is dragging ANY card currently
+    isDragging = false;
+
     // Northern Realms Deck
     // DEVNOTE: Try to keep very few healers for balancing reasons
     // total: 22 cards  -- TODO: later add x3 Decoy as DECOY type and x2 Commander's Horn as HORN (?) type
     // total strength = 149
-    std::vector<Card*> northernRealmsDeck = {
+    cardSize = 50;
+    playerDeck = {
         new Card("Geralt of Rivia", ATK, MELEE, 15),
         new Card("Ciri", HEAL, MELEE, 15),
         new Card("Yennefer of Vengerberg", ATK, RANGED, 7),
@@ -96,31 +100,80 @@ void Tema1::Init()
         new Card("Thaler", ATK, SIEGE, 1)   // TODO: turn into spy later
     };
 
+    // init the hand the player gets
+    playerHand = vector<Card*>();
+    DrawHand(); // stored to playerHand
+    for (int i = 0; i < handSize; i++)
+
+    // card drawer -- TODO: add shapes
+    for (int i = 0; i < playerHand.size(); i++) {
+        Mesh* tempCard;
+
+        switch (playerHand[i]->action) {
+            case ATK: tempCard = object2D::CreateSquare(playerHand[i]->name, corner, cardSize, glm::vec3(1, 0, 0), true);
+            case DEF: tempCard = object2D::CreateSquare(playerHand[i]->name, corner, cardSize, glm::vec3(0, 1, 0), true);
+            case HEAL: tempCard = object2D::CreateSquare(playerHand[i]->name, corner, cardSize, glm::vec3(0, 0, 1), true);
+        }
+        AddMeshToList(tempCard);
+    }
+    
+
     // player lanes
-    Mesh* playerSquare = object2D::CreateSquare("playerSquare", corner, squareSide, glm::vec3(0, 0, 1), true);
+    Mesh* playerSquare = object2D::CreateSquare("playerSquare", corner, squareSide, glm::vec3(0.5882f, 0.8078f, 1), true);  // light-blue
     AddMeshToList(playerSquare);
 
-	Mesh* playerHand = object2D::CreateSquare("playerHand", corner, squareSide, glm::vec3(0.32f, 0.24f, 0.16f), true);
-    AddMeshToList(playerHand);
+    // TODO: Make enemy hand that doesn't render but plays
+	Mesh* playerHandLane = object2D::CreateSquare("playerHand", corner, squareSide, glm::vec3(0.32f, 0.24f, 0.16f), true);
+    AddMeshToList(playerHandLane);
 
     Mesh* statsBar = object2D::CreateSquare("statsBar", corner, squareSide, glm::vec3(0.32f, 0.24f, 0.16f), true);
     AddMeshToList(statsBar);
 
-	Lane* Hand = new Lane("Hand", true, playerSquare);
+    playerLanes = vector<Lane*>();
 
-	Lane* melee1 = new Lane("melee1", true, playerSquare);
-    Lane* range1 = new Lane("ran1", true, playerSquare);
-    Lane* siege1 = new Lane("sieg1", true, playerSquare);
+	Lane* Hand = new Lane("Hand", true, &playerTurn, playerSquare);
+
+	Lane* melee1 = new Lane("melee", true, &playerTurn, playerSquare);
+    Lane* range1 = new Lane("ranged", true, &playerTurn, playerSquare);
+    Lane* siege1 = new Lane("siege", true, &playerTurn, playerSquare);
+
+    // siege1, range1, melee1 are pushed from bottom to top render-wise -- ex. siege1 is lowest so its first in playerLanes
+    playerLanes.push_back(siege1);
+    playerLanes.push_back(range1);
+    playerLanes.push_back(melee1);
+    playerLanes.push_back(Hand);    // hand lane is tied to id 3
 
 	// enemy lanes
-	Mesh* enemySquare = object2D::CreateSquare("enemySquare", corner, squareSide, glm::vec3(1, 0, 0), true);
+	Mesh* enemySquare = object2D::CreateSquare("enemySquare", corner, squareSide, glm::vec3(1, 0.4902f, 0.4902f), true);
 	AddMeshToList(enemySquare);
 
-	Lane* melee2 = new Lane("melee2", false, enemySquare);
-	Lane* range2 = new Lane("ran2", false, enemySquare);
-	Lane* siege2 = new Lane("sieg2", false, enemySquare);
+    enemyLanes = vector<Lane*>();
+
+	Lane* melee2 = new Lane("melee", false, &playerTurn, enemySquare);
+	Lane* range2 = new Lane("ranged", false, &playerTurn, enemySquare);
+	Lane* siege2 = new Lane("siege", false, &playerTurn, enemySquare);
+
+    playerLanes.push_back(melee2);
+    playerLanes.push_back(range2);
+    playerLanes.push_back(siege2);
  }
 
+ // method to get 10 random cards from deck
+void Tema1::DrawHand() {
+    for (int i = 0; i < handSize; i++) {
+        int id;
+        do    // draw until you get card that was not drawn yet
+            id = rand() % playerDeck.size();
+        while (playerDeck[id]->wasDrawn);
+
+        playerDeck[id]->wasDrawn = true;
+        playerHand.push_back(playerDeck[id]);
+    }
+}
+
+bool Tema1::getPlayerTurn() {
+    return playerTurn;
+}
 
 void Tema1::FrameStart()
 {
@@ -146,8 +199,18 @@ void Tema1::Update(float deltaTimeSeconds)
     float barWidth= 0.19f * resolution.x - offset;
 	float barHeight = resolution.y - 2 * offset;
 
-    // TODO: fix the scale: the scale should happen from right to left from the bottom right corner of the status bar
-    // currently: status bar does not scale proportionally
+    // render cards
+    modelMatrix = glm::mat3(1);
+    
+    modelMatrix *= transform2D::Translate(playerHand[0]->pos.x, playerHand[0]->pos.y);
+
+    modelMatrix *= transform2D::Translate(cx, cy);
+    modelMatrix *= transform2D::Scale(1, 1.5f);
+    modelMatrix *= transform2D::Translate(-cx, -cy);
+
+    RenderMesh2D(meshes[playerHand[0]->name], shaders["VertexColor"], modelMatrix);
+
+    // render board
     modelMatrix = glm::mat3(1);
 	modelMatrix *= transform2D::Translate(barWidth + offset, offset); // move pivot to bottom right
     //modelMatrix *= transform2D::Translate(offset, offset);
@@ -164,8 +227,13 @@ void Tema1::Update(float deltaTimeSeconds)
     // render player lanes
     for (int i = 0; i < 3; i++) {
         modelMatrix = glm::mat3(1);
+        
+        playerLanes[i]->setPos(translateX, translateY + i * (scaleY + offset));
         modelMatrix *= transform2D::Translate(translateX, translateY + i * (scaleY + offset));
+
+        playerLanes[i]->setSize(scaleX, scaleY);
         modelMatrix *= transform2D::Scale(scaleX, scaleY);
+
         RenderMesh2D(meshes["playerSquare"], shaders["VertexColor"], modelMatrix);
     }
 
@@ -199,7 +267,7 @@ void Tema1::FrameEnd()
 
 void Tema1::OnInputUpdate(float deltaTime, int mods)
 {
-
+    
 }
 
 
@@ -218,18 +286,118 @@ void Tema1::OnInputUpdate(float deltaTime, int mods)
     void Tema1::OnMouseMove(int mouseX, int mouseY, int deltaX, int deltaY)
     {
         // Add mouse move event
+        glm::ivec2 resolution = window->GetResolution();
+        mouseY = resolution.y - mouseY; // invert mouseY for correct compute
+
+        for (int i = 0; i < playerHand.size(); i++) {
+            if (playerHand[i]->isDragged) {
+                playerHand[i]->pos.x = mouseX - cardSize / 2.0f;
+                playerHand[i]->pos.y = mouseY - cardSize / 2.0f;
+            }
+        }
     }
 
 
     void Tema1::OnMouseBtnPress(int mouseX, int mouseY, int button, int mods)
     {
+        //printf("Pressed %d\n", button);
         // Add mouse button press event
+        glm::ivec2 resolution = window->GetResolution();
+        mouseY = resolution.y - mouseY; // invert mouseY for correct compute
+
+        if (button == GLFW_MOUSE_BUTTON_2) {
+            if (!isDragging) {
+                cout << "mouseX = " << mouseX << "; mouseY = " << mouseY << "\n";
+                for (int i = 0; i < playerHand.size(); i++) {
+                    if ((mouseX >= playerHand[i]->pos.x && mouseX <= playerHand[i]->pos.x + cardSize
+                        && mouseY >= playerHand[i]->pos.y && mouseY <= playerHand[i]->pos.y + cardSize
+                        || playerHand[i]->isDragged) && !playerHand[i]->used) {
+                        cout << "Moving " << playerHand[i]->name << "\n";
+                        //playerDeck[i]->pos.x = mouseX;
+                        //playerDeck[i]->pos.y = mouseY;ea
+                        playerHand[i]->isSelected = true;   // TODO remember to deselect at some point
+                        playerHand[i]->isDragged = true;    // TODO remember to turn false when btn release
+
+                        // game state variables
+                        //cout << "setting isDragging to true\n";
+                        isDragging = true;
+                        draggedCard = playerHand[i];    // card that is going to be dragged
+                        cout << "dragging " << playerHand[i]->name << " of type " << playerHand[i]->type << "\n";
+
+                        playerHand[i]->initPos = playerHand[i]->pos;
+
+                        // DEVNOTE TODO: consider removing break once cards don't overlap
+                        break;
+                    }
+
+                    if (!playerHand[i]->isDragged) {
+                        playerHand[i]->isSelected = false;  // deselect if i drag a different card
+                    }
+                }
+            }
+            else { // if is dragging and click again
+                cout << "checking lanes...\n";
+                bool foundValidLane = false;
+                for (int i = 0; i < 3; i++) {
+                    // TODO lane check
+                    if (playerLanes[i]->isInLane(mouseX, mouseY) && playerLanes[i]->isValid(draggedCard)) {
+                        cout << "adding card " << draggedCard->name << " to lane " << playerLanes[i]->type << "\n";
+                        foundValidLane = true;
+
+                        cout << "center of lane = " << playerLanes[i]->getCenter() << "\n";
+                        draggedCard->pos = playerLanes[i]->getCenter(); // place card on center
+                        playerLanes[i]->addCard(draggedCard);
+                        draggedCard->used = true;
+
+                        break;
+                    }
+                }
+                if (!foundValidLane) {  // reset position, no new valid position found
+                    cout << "INVALID POSITION! reseting card position\n";
+
+                    draggedCard->pos = draggedCard->initPos;
+                }
+                
+                // stop dragging regardless of outcome
+                draggedCard->isSelected = false;  // I'd prever if it remained selected on invalid input
+                draggedCard->isDragged = false;
+
+                // a toggle kind of click, does not need code for release
+                isDragging = false;
+            }
+        }
+
+        if (button == GLFW_MOUSE_BUTTON_3) {    // on right click
+            cout << "Stopped dragging\n";
+            for (int i = 0; i < playerHand.size(); i++) {
+                playerHand[i]->isSelected = false;  // deselect everything on right click
+                playerHand[i]->isDragged = false;
+                // a toggle kind of click, does not need code for release
+                isDragging = false;
+
+                playerHand[i]->pos = playerHand[i]->initPos;
+            }
+        }
     }
 
 
     void Tema1::OnMouseBtnRelease(int mouseX, int mouseY, int button, int mods)
     {
+        glm::ivec2 resolution = window->GetResolution();
+        mouseY = resolution.y - mouseY; // invert mouseY for correct compute
+
         // Add mouse button release event
+        //if (button = GLFW_MOUSE_BUTTON_2) { // on left click
+        //    for (int i = 0; i < playerHand.size(); i++) {
+        //        if (playerHand[i]->isDragged == true) {
+        //            // update the last frame position   -- TODO make it pick the closest lane
+        //            playerHand[i]->pos.x = mouseX;
+        //            playerHand[i]->pos.y = mouseY;
+        //            playerHand[i]->isDragged = false;
+        //            isDragging = false;
+        //        }
+        //    }
+        //}
     }
 
 

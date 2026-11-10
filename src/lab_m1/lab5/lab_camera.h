@@ -8,31 +8,33 @@ namespace implemented
 {
     class Camera
     {
-     public:
+    public:
         Camera()
         {
-            position    = glm::vec3(0, 2, 5);
-            forward     = glm::vec3(0, 0, -1);
-            up          = glm::vec3(0, 1, 0);
-            right       = glm::vec3(1, 0, 0);
+            position = glm::vec3(0, 2, 5);
+            forward = glm::vec3(0, 0, -1);
+            up = glm::vec3(0, 1, 0);
+            right = glm::vec3(1, 0, 0);
             distanceToTarget = 2;
+            //model = glm::mat4(1.0f);
         }
 
-        Camera(const glm::vec3 &position, const glm::vec3 &center, const glm::vec3 &up)
+        Camera(const glm::vec3& position, const glm::vec3& center, const glm::vec3& up)
         {
             Set(position, center, up);
         }
 
         ~Camera()
-        { }
+        {
+        }
 
         // Update camera
-        void Set(const glm::vec3 &position, const glm::vec3 &center, const glm::vec3 &up)
+        void Set(const glm::vec3& position, const glm::vec3& center, const glm::vec3& up)
         {
             this->position = position;
-            forward     = glm::normalize(center - position);
-            right       = glm::cross(forward, up);
-            this->up    = glm::cross(right, forward);
+            forward = glm::normalize(center - position);
+            right = glm::cross(forward, up);
+            this->up = glm::cross(right, forward);
         }
 
         void MoveForward(float distance)
@@ -51,13 +53,15 @@ namespace implemented
             // TODO(student): Translate the camera using the `forward` vector.
             // What's the difference between `TranslateForward()` and
             // `MoveForward()`?
-
+            glm::vec3 dir = glm::normalize(glm::vec3(forward.x, 0, forward.z));
+            position += dir * distance;
         }
 
         void TranslateUpward(float distance)
         {
             // TODO(student): Translate the camera using the `up` vector.
-
+            glm::vec3 dir = glm::normalize(glm::vec3(0, up.y, 0));
+            position += dir * distance;
         }
 
         void TranslateRight(float distance)
@@ -72,7 +76,8 @@ namespace implemented
             // actually use the projected `right` vector (projected onto the
             // ground plane), which makes more sense because we will keep the
             // same distance from the ground plane.
-
+            glm::vec3 dir = glm::normalize(glm::vec3(right.x, 0, right.z));
+            position += dir * distance;
         }
 
         void RotateFirstPerson_OX(float angle)
@@ -80,6 +85,18 @@ namespace implemented
             // TODO(student): Compute the new `forward` and `up` vectors.
             // Don't forget to normalize the vectors! Use `glm::rotate()`.
 
+            glm::vec4 newForward = glm::vec4(forward, 1.0);
+            glm::vec4 newUp = glm::vec4(up, 1.0);
+            glm::mat4 model = glm::mat4(1.0f);
+
+            model = glm::rotate(model, angle, right);
+            newForward = model * newForward;
+            forward = glm::normalize(glm::vec3(newForward));
+
+            newUp = model * newUp;
+            up = glm::normalize(glm::vec3(newUp));
+
+            right = glm::cross(forward, up);
         }
 
         void RotateFirstPerson_OY(float angle)
@@ -88,6 +105,23 @@ namespace implemented
             // vectors. Use `glm::rotate()`. Don't forget to normalize the
             // vectors!
 
+            glm::vec4 newForward = glm::vec4(forward, 1.0);
+            glm::vec4 newRight = glm::vec4(right, 1.0);
+            glm::vec4 newUp = glm::vec4(up, 1.0);
+            glm::mat4 model = glm::mat4(1.0f);
+
+            model = glm::rotate(model, angle, glm::vec3(0, 1, 0));
+
+            newForward = model * newForward;
+            forward = glm::normalize(glm::vec3(newForward));
+
+            newRight = model * newRight;
+            right= glm::normalize(glm::vec3(newRight));
+
+            //newUp = model * newUp;
+            //up = glm::normalize(glm::vec3(newUp));
+
+            up = glm::cross(right, forward);
         }
 
         void RotateFirstPerson_OZ(float angle)
@@ -96,6 +130,16 @@ namespace implemented
             // `forward` stays the same. Use `glm::rotate()`. Don't forget
             // to normalize the vectors!
 
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::rotate(model, angle, forward);
+
+            glm::vec4 newRight = glm::vec4(right, 1.0);
+            newRight = model * newRight;
+            right = glm::normalize(glm::vec3(newRight));
+        
+            glm::vec4 newUp = glm::vec4(up, 1.0);
+            newUp = model * newUp;
+            up = glm::normalize(glm::vec3(newUp));
         }
 
         void RotateThirdPerson_OX(float angle)
@@ -103,6 +147,23 @@ namespace implemented
             // TODO(student): Rotate the camera in third-person mode around
             // the OX axis. Use `distanceToTarget` as translation distance.
 
+            position += forward * distanceToTarget;
+
+            glm::vec4 newForward = glm::vec4(forward, 1.0);
+            glm::vec4 newUp = glm::vec4(up, 1.0);
+            glm::mat4 model = glm::mat4(1.0f);
+
+            model = glm::rotate(model, angle, glm::vec3(1, 0, 0));
+
+            newForward = model * newForward;
+            forward = glm::normalize(glm::vec3(newForward));
+
+            newUp = model * newUp;
+            up = glm::normalize(glm::vec3(newUp));
+
+            right = glm::cross(forward, up);    // ensure axis(es?) remain perpendicular
+
+            position -= forward * distanceToTarget;
         }
 
         void RotateThirdPerson_OY(float angle)
@@ -110,6 +171,24 @@ namespace implemented
             // TODO(student): Rotate the camera in third-person mode around
             // the OY axis.
 
+            position += forward * distanceToTarget;
+
+            glm::vec4 newForward = glm::vec4(forward, 1.0);
+            glm::vec4 newRight = glm::vec4(right, 1.0);
+            glm::vec4 newUp = glm::vec4(up, 1.0);
+            glm::mat4 model = glm::mat4(1.0f);
+
+            model = glm::rotate(model, angle, glm::vec3(0, 1, 0));
+
+            newForward = model * newForward;
+            forward = glm::normalize(glm::vec3(newForward));
+
+            newRight = model * newRight;
+            right = glm::normalize(glm::vec3(newRight));
+
+            up = glm::cross(forward, right);    // ensure axis(es?) remain perpendicular
+
+            position -= forward * distanceToTarget;
         }
 
         void RotateThirdPerson_OZ(float angle)
@@ -117,6 +196,23 @@ namespace implemented
             // TODO(student): Rotate the camera in third-person mode around
             // the OZ axis.
 
+            //position += forward * distanceToTarget;
+
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::rotate(model, angle, glm::vec3(0, 0, 1));
+
+            glm::vec4 newRight = glm::vec4(right, 1.0);
+            newRight = model * newRight;
+            right = glm::normalize(glm::vec3(newRight));
+
+            glm::vec4 newUp = glm::vec4(up, 1.0);
+            newUp = model * newUp;
+            up = glm::normalize(glm::vec3(newUp));
+
+            // obsolette? -- forward value should remain the same
+            forward = glm::cross(up, right);    // ensure perpendicularity between axis(es?)
+        
+            //position -= forward * distanceToTarget;
         }
 
         glm::mat4 GetViewMatrix()
@@ -130,11 +226,12 @@ namespace implemented
             return position + forward * distanceToTarget;
         }
 
-     public:
+    public:
         float distanceToTarget;
         glm::vec3 position;
         glm::vec3 forward;
         glm::vec3 right;
         glm::vec3 up;
+        //glm::mat4 model;
     };
 }   // namespace implemented

@@ -33,35 +33,46 @@ namespace m1
     {
     public:
         bool isSelected;
+        bool isDragged;
+        bool wasDrawn;
         bool used;
         std::string name;
-        std::string action;
+        cardAction action;
         std::string type;
         int value;
+        glm::vec2 pos;
+        glm::vec2 initPos;
+        //Lane lane;  // assigned lane at a given time
 
         Card(const std::string& name, cardAction action, cardType type, int value);//, const std::vector<VertexFormat>& vertices, const std::vector<unsigned short>& indices);
         ~Card();
-
-        void buildCard(std::string& type);
     };
 
     class Lane : public Mesh
     {
     public:
+        float width, height;
+
         bool isPlayer;
+        bool* playerTurn;   // bool ref so it updates as soon as playerTurn in Tema1 changes
         Mesh* shape;
         std::string type;
         std::vector<Card*> cards;
+        //glm::vec2 center;   // center of lane -- is it necessary???
+        glm::vec2 pos;
 
         int totalAtk, totalDef, totalHeal;
 
-        Lane(const std::string& type, bool isPlayer, Mesh* shape);
+        Lane(const std::string& type, bool isPlayer, bool* playerTurn, Mesh* shape);
         ~Lane();
 
         bool isInLane(float x, float y);
-        glm::vec2 getLaneMiddle();
+        bool isValid(Card* card);
+        glm::vec2 getCenter();
         void addCard(Card* card);
         void removeCard(Card* card);
+        void setSize(float width, float height);
+        void setPos(float x, float y);
     };
 
     class Tema1 : public gfxc::SimpleScene
@@ -85,6 +96,11 @@ namespace m1
         void OnMouseBtnRelease(int mouseX, int mouseY, int button, int mods) override;
         void OnMouseScroll(int mouseX, int mouseY, int offsetX, int offsetY) override;
         void OnWindowResize(int width, int height) override;
+        
+        // student-defined methods
+        //void DrawCard(std::string& type);
+        void DrawHand();
+        bool getPlayerTurn();
 
     protected:
         float cx, cy;
@@ -103,11 +119,24 @@ namespace m1
         float carX, carY;
         float rotationAngle;
 
+        // fixed card size
+        float cardSize;
         // variables to ensure aspect ratio 
         float lastWidth, lastHeight;
         // TODO: consider removing isResizing if obsolete
         bool isResizing;
+        bool isDragging; // game-owned variable to check if mouse is dragging ANY card currently
+        Card* draggedCard;   // card that is currently dragged with the mouse
+        // used to identify if card hovers eligible lane
 
-        bool isPlayerTurn;
+        int handSize = 10;
+        std::vector<Card*> playerDeck;
+        std::vector<Card*> playerHand;
+
+        std::vector<Lane*> playerLanes;
+        std::vector<Lane*> enemyLanes;
+        //std::vector<Card*> northernRealmsDeck;
+
+        bool playerTurn;
     };
 }   // namespace m1

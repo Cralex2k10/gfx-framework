@@ -8,18 +8,18 @@ namespace m1
 {
     class Lab5 : public gfxc::SimpleScene
     {
-     public:
+    public:
         Lab5();
         ~Lab5();
 
         void Init() override;
 
-     private:
+    private:
         void FrameStart() override;
         void Update(float deltaTimeSeconds) override;
         void FrameEnd() override;
 
-        void RenderMesh(Mesh *mesh, Shader *shader, const glm::mat4 &modelMatrix) override;
+        void RenderMesh(Mesh* mesh, Shader* shader, const glm::mat4& modelMatrix) override;
 
         void OnInputUpdate(float deltaTime, int mods) override;
         void OnKeyPress(int key, int mods) override;
@@ -30,10 +30,13 @@ namespace m1
         void OnMouseScroll(int mouseX, int mouseY, int offsetX, int offsetY) override;
         void OnWindowResize(int width, int height) override;
 
-     protected:
-        implemented::Camera *camera;
+    protected:
+        implemented::Camera* camera;
         glm::mat4 projectionMatrix;
         bool renderCameraTarget;
+        bool projectionType;    // false = perspective, true = orthographic
+        float fov;
+        float halfHeight;
 
         // TODO(student): If you need any other class variables, define them here.
 
