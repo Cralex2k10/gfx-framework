@@ -161,7 +161,7 @@ namespace implemented
             newUp = model * newUp;
             up = glm::normalize(glm::vec3(newUp));
 
-            right = glm::cross(forward, up);    // ensure axis(es?) remain perpendicular
+            //right = glm::cross(forward, up);    // ensure axis(es?) remain perpendicular
 
             position -= forward * distanceToTarget;
         }
@@ -186,7 +186,7 @@ namespace implemented
             newRight = model * newRight;
             right = glm::normalize(glm::vec3(newRight));
 
-            up = glm::cross(forward, right);    // ensure axis(es?) remain perpendicular
+            up = -glm::cross(forward, right);    // ensure axis(es?) remain perpendicular
 
             position -= forward * distanceToTarget;
         }
@@ -210,7 +210,7 @@ namespace implemented
             up = glm::normalize(glm::vec3(newUp));
 
             // obsolette? -- forward value should remain the same
-            forward = glm::cross(up, right);    // ensure perpendicularity between axis(es?)
+            //forward = glm::cross(up, right);    // ensure perpendicularity between axis(es?)
         
             //position -= forward * distanceToTarget;
         }

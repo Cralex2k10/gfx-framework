@@ -204,9 +204,9 @@ void Tema1::Update(float deltaTimeSeconds)
     
     modelMatrix *= transform2D::Translate(playerHand[0]->pos.x, playerHand[0]->pos.y);
 
-    modelMatrix *= transform2D::Translate(cx, cy);
+    //modelMatrix *= transform2D::Translate(cx, cy);
     modelMatrix *= transform2D::Scale(1, 1.5f);
-    modelMatrix *= transform2D::Translate(-cx, -cy);
+    //modelMatrix *= transform2D::Translate(-cx, -cy);
 
     RenderMesh2D(meshes[playerHand[0]->name], shaders["VertexColor"], modelMatrix);
 
