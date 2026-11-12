@@ -48,12 +48,15 @@ void Tema1::Init()
     // `corner` and `squareSide`. These two class variables will be used
     // in the `Update()` function. Think about it, why do you need them?
 
+    cardSize = 50;
+
     cx = cardSize / 2;
     cy = cardSize / 2;
 
     // Initialize tx and ty (the translation steps)
     translateX = resolution.x * 0.195f;
     translateY = resolution.y * 0.25f;
+    offset = 0.005f * resolution.y; // offset between lanes
 
     // Initialize sx and sy (the scale factors)
     scaleX = resolution.x * 0.8f;
@@ -74,7 +77,6 @@ void Tema1::Init()
     // DEVNOTE: Try to keep very few healers for balancing reasons
     // total: 22 cards  -- TODO: later add x3 Decoy as DECOY type and x2 Commander's Horn as HORN (?) type
     // total strength = 149
-    cardSize = 50;
     playerDeck = {
         new Card("Geralt of Rivia", ATK, MELEE, 15),
         new Card("Ciri", HEAL, MELEE, 15),
@@ -99,39 +101,48 @@ void Tema1::Init()
         new Card("Blue Stripes Commando", ATK, MELEE, 4),
         new Card("Thaler", ATK, SIEGE, 1)   // TODO: turn into spy later
     };
-
-    // init the hand the player gets
-    playerHand = vector<Card*>();
-    DrawHand(); // stored to playerHand
-    for (int i = 0; i < handSize; i++)
-
-    // card drawer -- TODO: add shapes
-    for (int i = 0; i < playerHand.size(); i++) {
-        Mesh* tempCard;
-
-        switch (playerHand[i]->action) {
-            case ATK: tempCard = object2D::CreateSquare(playerHand[i]->name, corner, cardSize, glm::vec3(1, 0, 0), true);
-            case DEF: tempCard = object2D::CreateSquare(playerHand[i]->name, corner, cardSize, glm::vec3(0, 1, 0), true);
-            case HEAL: tempCard = object2D::CreateSquare(playerHand[i]->name, corner, cardSize, glm::vec3(0, 0, 1), true);
-        }
-        AddMeshToList(tempCard);
-    }
     
 
     // player lanes
-    Mesh* playerSquare = object2D::CreateSquare("playerSquare", corner, squareSide, glm::vec3(0.5882f, 0.8078f, 1), true);  // light-blue
+    Mesh* playerSquare = object2D::CreateSquare("playerSquare", corner, squareSide, glm::vec3(6 / 255.f, 115 / 255.f, 145 / 255.f), true);  // cyan
     AddMeshToList(playerSquare);
 
     // TODO: Make enemy hand that doesn't render but plays
 	Mesh* playerHandLane = object2D::CreateSquare("playerHand", corner, squareSide, glm::vec3(0.32f, 0.24f, 0.16f), true);
     AddMeshToList(playerHandLane);
 
+    // TODO: Replace statsBar with a full darker brown background 
+    // -- player hp, round, turn and maybe weather will just be placed in the darker brown area to the left of the table
     Mesh* statsBar = object2D::CreateSquare("statsBar", corner, squareSide, glm::vec3(0.32f, 0.24f, 0.16f), true);
     AddMeshToList(statsBar);
 
     playerLanes = vector<Lane*>();
 
-	Lane* Hand = new Lane("Hand", true, &playerTurn, playerSquare);
+    // init hand, set size and pos and drawn cards in hand
+	Hand = new Lane("Hand", true, &playerTurn, playerHandLane);
+    Hand->setPos(translateX, offset);
+    Hand->setSize(scaleX, 2 * scaleY);
+
+    // init the hand the player gets
+    playerHand = vector<Card*>();
+    DrawCards(handSize); // stored to playerHand
+    Hand->printCards();
+    //for (int i = 0; i < handSize; i++)
+
+    // card drawer -- TODO: add shapes
+    for (int i = 0; i < playerHand.size(); i++) {
+        Mesh* tempCard;
+
+        switch (playerHand[i]->action) {                                    // i still dont really get why i need 3 coords to create a 2D square -- glm::vec3(playerHand[i]->pos, 0)
+        case ATK: tempCard = object2D::CreateSquare(playerHand[i]->name, corner, cardSize, glm::vec3(163 / 255.f, 0, 0), true); break;  // red
+        case DEF: tempCard = object2D::CreateSquare(playerHand[i]->name, corner, cardSize, glm::vec3(10 / 255.f, 125 / 255.f, 41 / 255.f), true); break;    // green
+        case HEAL: tempCard = object2D::CreateSquare(playerHand[i]->name, corner, cardSize, glm::vec3(0 / 255.f, 170 / 255.f, 217 / 255.f), true); break;   // blue
+        }
+        AddMeshToList(tempCard);
+    }
+
+    Mesh* cardOutline = object2D::CreateSquare("cardOutline", corner, cardSize, glm::vec3(36 / 255.f, 40 / 255.f, 41 / 255.f), false); // dark gray
+    AddMeshToList(cardOutline);
 
 	Lane* melee1 = new Lane("melee", true, &playerTurn, playerSquare);
     Lane* range1 = new Lane("ranged", true, &playerTurn, playerSquare);
@@ -141,10 +152,10 @@ void Tema1::Init()
     playerLanes.push_back(siege1);
     playerLanes.push_back(range1);
     playerLanes.push_back(melee1);
-    playerLanes.push_back(Hand);    // hand lane is tied to id 3
+    //playerLanes.push_back(Hand);    // hand lane is tied to id 3
 
 	// enemy lanes
-	Mesh* enemySquare = object2D::CreateSquare("enemySquare", corner, squareSide, glm::vec3(1, 0.4902f, 0.4902f), true);
+	Mesh* enemySquare = object2D::CreateSquare("enemySquare", corner, squareSide, glm::vec3(112 / 255.f, 13 / 255.f, 2 / 255.f), true);
 	AddMeshToList(enemySquare);
 
     enemyLanes = vector<Lane*>();
@@ -153,21 +164,38 @@ void Tema1::Init()
 	Lane* range2 = new Lane("ranged", false, &playerTurn, enemySquare);
 	Lane* siege2 = new Lane("siege", false, &playerTurn, enemySquare);
 
-    playerLanes.push_back(melee2);
-    playerLanes.push_back(range2);
-    playerLanes.push_back(siege2);
+    enemyLanes.push_back(melee2);
+    enemyLanes.push_back(range2);
+    enemyLanes.push_back(siege2);
+
+    // initialize positions and sizes for each player lane
+    for (int i = 0; i < playerLanes.size(); i++) {
+        playerLanes[i]->setPos(translateX, translateY + i * (scaleY + offset));
+        playerLanes[i]->setSize(scaleX, scaleY);
+    }
+
+    // initialize positions and sizes for each enemy lane
+    for (int i = 0; i < enemyLanes.size(); i++) {
+        enemyLanes[i]->setPos(translateX, translateY + (i + playerLanes.size()) * (scaleY + offset));   // for drawing purposes
+        enemyLanes[i]->setSize(scaleX, scaleY);
+    }
  }
 
  // method to get 10 random cards from deck
-void Tema1::DrawHand() {
-    for (int i = 0; i < handSize; i++) {
+void Tema1::DrawCards(int count) {
+    //Hand->getSize();
+    for (int i = 0; i < count; i++) {
         int id;
         do    // draw until you get card that was not drawn yet
             id = rand() % playerDeck.size();
         while (playerDeck[id]->wasDrawn);
 
-        playerDeck[id]->wasDrawn = true;
+        playerDeck[id]->wasDrawn = true;    // drawn meaning picked
         playerHand.push_back(playerDeck[id]);
+        tableCards.push_back(playerDeck[id]);   // get let the table have an evidence of all the cards in game
+
+        Hand->addCard(playerDeck[id]);
+        //cout << playerDeck[id]->name << "is at coords [" << playerDeck[id]->pos.x << ", " << playerDeck[id]->pos.y << "]\n";
     }
 }
 
@@ -193,22 +221,45 @@ void Tema1::Update(float deltaTimeSeconds)
 
     // render board -- should remain static
 
-    float offset = 0.005f * resolution.y;
-
 	// render stats bar
     float barWidth= 0.19f * resolution.x - offset;
 	float barHeight = resolution.y - 2 * offset;
 
-    // render cards
-    modelMatrix = glm::mat3(1);
-    
-    modelMatrix *= transform2D::Translate(playerHand[0]->pos.x, playerHand[0]->pos.y);
 
-    //modelMatrix *= transform2D::Translate(cx, cy);
-    modelMatrix *= transform2D::Scale(1, 1.5f);
-    //modelMatrix *= transform2D::Translate(-cx, -cy);
+    // render cards in Hand
+    for (int i = 0; i < tableCards.size(); i++) {
+        modelMatrix = glm::mat3(1);
 
-    RenderMesh2D(meshes[playerHand[0]->name], shaders["VertexColor"], modelMatrix);
+        modelMatrix *= transform2D::Translate(tableCards[i]->pos.x, tableCards[i]->pos.y);
+
+        modelMatrix *= transform2D::Translate(cx, cy);
+        modelMatrix *= transform2D::Scale(1, 1.5f);
+        modelMatrix *= transform2D::Translate(-cx, -cy);
+
+        // make outline a little thicker
+        glLineWidth(5.0f);
+        RenderMesh2D(meshes["cardOutline"], shaders["VertexColor"], modelMatrix);
+        glLineWidth(1.0f);
+
+        RenderMesh2D(meshes[tableCards[i]->name], shaders["VertexColor"], modelMatrix);
+
+        //modelMatrix *= transform2D::Translate(-0.05f * cardSize, -0.05f * cardSize);
+    }
+
+    // render cards on board lanes
+    //for (int l = 0; l < playerLanes.size(); l++) {
+    //    for (int i = 0; i < playerLanes[l]->cards.size(); i++) {
+    //        modelMatrix = glm::mat3(1);
+
+    //        modelMatrix *= transform2D::Translate(playerLanes[l]->cards[i]->pos.x, playerLanes[l]->cards[i]->pos.y);
+
+    //        modelMatrix *= transform2D::Translate(cx, cy);
+    //        modelMatrix *= transform2D::Scale(1, 1.5f);
+    //        modelMatrix *= transform2D::Translate(-cx, -cy);
+
+    //        RenderMesh2D(meshes[playerHand[0]->name], shaders["VertexColor"], modelMatrix);
+    //    }
+    //}
 
     // render board
     modelMatrix = glm::mat3(1);
@@ -218,30 +269,29 @@ void Tema1::Update(float deltaTimeSeconds)
     modelMatrix *= transform2D::Translate(-1, 0);   // move pivot back (original squareSide = 1, NOT barWidth) -- doesnt do anything rn
     RenderMesh2D(meshes["statsBar"], shaders["VertexColor"], modelMatrix);
 
-    // render player hand
+    // render player hand lane
     modelMatrix = glm::mat3(1);
-    modelMatrix *= transform2D::Translate(translateX, offset);
-    modelMatrix *= transform2D::Scale(scaleX, 2 * scaleY);
+    modelMatrix *= transform2D::Translate(Hand->pos.x, Hand->pos.y);
+    modelMatrix *= transform2D::Scale(Hand->width, Hand->height);
+
     RenderMesh2D(meshes["playerHand"], shaders["VertexColor"], modelMatrix);
 
     // render player lanes
     for (int i = 0; i < 3; i++) {
         modelMatrix = glm::mat3(1);
         
-        playerLanes[i]->setPos(translateX, translateY + i * (scaleY + offset));
-        modelMatrix *= transform2D::Translate(translateX, translateY + i * (scaleY + offset));
-
-        playerLanes[i]->setSize(scaleX, scaleY);
-        modelMatrix *= transform2D::Scale(scaleX, scaleY);
+        //playerLanes[i]->setPos(translateX, translateY + i * (scaleY + offset));
+        modelMatrix *= transform2D::Translate(playerLanes[i]->pos.x, playerLanes[i]->pos.y);
+        modelMatrix *= transform2D::Scale(playerLanes[i]->width, playerLanes[i]->height);
 
         RenderMesh2D(meshes["playerSquare"], shaders["VertexColor"], modelMatrix);
     }
 
 	// render enemy lanes
-    for (int i = 3; i < 6; i++) {
+    for (int i = 0; i < 3; i++) {
         modelMatrix = glm::mat3(1);
-        modelMatrix *= transform2D::Translate(translateX, translateY + i * (scaleY + offset));
-        modelMatrix *= transform2D::Scale(scaleX, scaleY);
+        modelMatrix *= transform2D::Translate(enemyLanes[i]->pos.x, enemyLanes[i]->pos.y);
+        modelMatrix *= transform2D::Scale(enemyLanes[i]->width, enemyLanes[i]->height);
         RenderMesh2D(meshes["enemySquare"], shaders["VertexColor"], modelMatrix);
     }
 
@@ -347,6 +397,7 @@ void Tema1::OnInputUpdate(float deltaTime, int mods)
                         cout << "center of lane = " << playerLanes[i]->getCenter() << "\n";
                         draggedCard->pos = playerLanes[i]->getCenter(); // place card on center
                         playerLanes[i]->addCard(draggedCard);
+                        Hand->removeCard(draggedCard);
                         draggedCard->used = true;
 
                         break;
@@ -369,14 +420,11 @@ void Tema1::OnInputUpdate(float deltaTime, int mods)
 
         if (button == GLFW_MOUSE_BUTTON_3) {    // on right click
             cout << "Stopped dragging\n";
-            for (int i = 0; i < playerHand.size(); i++) {
-                playerHand[i]->isSelected = false;  // deselect everything on right click
-                playerHand[i]->isDragged = false;
-                // a toggle kind of click, does not need code for release
-                isDragging = false;
 
-                playerHand[i]->pos = playerHand[i]->initPos;
-            }
+            draggedCard->isSelected = false;
+            draggedCard->isDragged = false;
+            isDragging = false;
+            draggedCard->pos = draggedCard->initPos;
         }
     }
 
@@ -387,17 +435,6 @@ void Tema1::OnInputUpdate(float deltaTime, int mods)
         mouseY = resolution.y - mouseY; // invert mouseY for correct compute
 
         // Add mouse button release event
-        //if (button = GLFW_MOUSE_BUTTON_2) { // on left click
-        //    for (int i = 0; i < playerHand.size(); i++) {
-        //        if (playerHand[i]->isDragged == true) {
-        //            // update the last frame position   -- TODO make it pick the closest lane
-        //            playerHand[i]->pos.x = mouseX;
-        //            playerHand[i]->pos.y = mouseY;
-        //            playerHand[i]->isDragged = false;
-        //            isDragging = false;
-        //        }
-        //    }
-        //}
     }
 
 

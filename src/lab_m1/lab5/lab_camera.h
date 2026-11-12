@@ -201,13 +201,13 @@ namespace implemented
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::rotate(model, angle, glm::vec3(0, 0, 1));
 
-            glm::vec4 newRight = glm::vec4(right, 1.0);
-            newRight = model * newRight;
-            right = glm::normalize(glm::vec3(newRight));
+            //glm::vec4 newRight = glm::vec4(right, 1.0);
+            //newRight = model * newRight;
+            //right = glm::normalize(glm::vec3(newRight));
 
-            glm::vec4 newUp = glm::vec4(up, 1.0);
-            newUp = model * newUp;
-            up = glm::normalize(glm::vec3(newUp));
+            //glm::vec4 newUp = glm::vec4(up, 1.0);
+            //newUp = model * newUp;
+            //up = glm::normalize(glm::vec3(newUp));
 
             // obsolette? -- forward value should remain the same
             //forward = glm::cross(up, right);    // ensure perpendicularity between axis(es?)

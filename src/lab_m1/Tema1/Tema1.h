@@ -44,6 +44,8 @@ namespace m1
         glm::vec2 initPos;
         //Lane lane;  // assigned lane at a given time
 
+        float cardSize, width, height;
+
         Card(const std::string& name, cardAction action, cardType type, int value);//, const std::vector<VertexFormat>& vertices, const std::vector<unsigned short>& indices);
         ~Card();
     };
@@ -71,8 +73,26 @@ namespace m1
         glm::vec2 getCenter();
         void addCard(Card* card);
         void removeCard(Card* card);
+        void updateCardsPos();
         void setSize(float width, float height);
+        void getSize();
         void setPos(float x, float y);
+        void printCards();
+    };
+
+    class Player {
+    public:
+        Player(bool isPlayer, std::vector<Card*> deck);
+        ~Player();
+
+    protected:
+        bool isPlayer;
+        std::vector<Card*> deck;
+        std::vector<Card*> hand;
+        std::string name;
+        int roundScore;
+        int roundsWon;
+        int hp;
     };
 
     class Tema1 : public gfxc::SimpleScene
@@ -99,14 +119,14 @@ namespace m1
         
         // student-defined methods
         //void DrawCard(std::string& type);
-        void DrawHand();
+        void DrawCards(int count);
         bool getPlayerTurn();
 
     protected:
         float cx, cy;
         glm::mat3 modelMatrix;
         float translateX, translateY;
-        float scaleX, scaleY;
+        float scaleX, scaleY, offset;
         float angularStep;
 
         // TODO(student): If you need any other class variables, define them here.
@@ -129,10 +149,14 @@ namespace m1
         Card* draggedCard;   // card that is currently dragged with the mouse
         // used to identify if card hovers eligible lane
 
+        Player player, enemy;
+
         int handSize = 10;
         std::vector<Card*> playerDeck;
         std::vector<Card*> playerHand;
+        std::vector<Card*> tableCards;
 
+        Lane* Hand;
         std::vector<Lane*> playerLanes;
         std::vector<Lane*> enemyLanes;
         //std::vector<Card*> northernRealmsDeck;

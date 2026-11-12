@@ -16,6 +16,10 @@ Card::~Card()
 //, const std::vector<VertexFormat>& vertices, const std::vector<unsigned short>& indices)
 Card::Card(const std::string& name, cardAction action, cardType type, int value) : Mesh(cardTypeToString(type))	// Needed converter from CardType enum to string
 {
+	this->cardSize = 50;
+	this->width = cardSize * 1.0f;
+	this->height = cardSize * 1.5f;
+
 	this->isSelected = false;
 	this->isDragged = false;
 	this->name = name;
