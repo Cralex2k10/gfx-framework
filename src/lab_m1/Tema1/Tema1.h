@@ -85,7 +85,7 @@ namespace m1
         Player(bool isPlayer, std::vector<Card*> deck);
         ~Player();
 
-    protected:
+    public:
         bool isPlayer;
         std::vector<Card*> deck;
         std::vector<Card*> hand;
@@ -119,7 +119,7 @@ namespace m1
         
         // student-defined methods
         //void DrawCard(std::string& type);
-        void DrawCards(int count);
+        void DrawCards(Player* player, int count);
         bool getPlayerTurn();
 
     protected:
@@ -149,7 +149,8 @@ namespace m1
         Card* draggedCard;   // card that is currently dragged with the mouse
         // used to identify if card hovers eligible lane
 
-        Player player, enemy;
+        Player* player;
+        Player* enemy;
 
         int handSize = 10;
         std::vector<Card*> playerDeck;

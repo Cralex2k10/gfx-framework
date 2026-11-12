@@ -23,6 +23,7 @@ Tema1::Tema1()
 
 Tema1::~Tema1()
 {
+    delete player, enemy;
 }
 
 
@@ -77,7 +78,7 @@ void Tema1::Init()
     // DEVNOTE: Try to keep very few healers for balancing reasons
     // total: 22 cards  -- TODO: later add x3 Decoy as DECOY type and x2 Commander's Horn as HORN (?) type
     // total strength = 149
-    playerDeck = {
+    vector<Card*> northernRealms = {
         new Card("Geralt of Rivia", ATK, MELEE, 15),
         new Card("Ciri", HEAL, MELEE, 15),
         new Card("Yennefer of Vengerberg", ATK, RANGED, 7),
@@ -101,7 +102,12 @@ void Tema1::Init()
         new Card("Blue Stripes Commando", ATK, MELEE, 4),
         new Card("Thaler", ATK, SIEGE, 1)   // TODO: turn into spy later
     };
-    
+
+    playerDeck = northernRealms;    // might be able to remove
+
+    // TODO: as-is im pretty sure both players compute the same instance of the deck, i want each player with a different deck
+    player = new Player(true, northernRealms);
+    enemy = new Player(false, northernRealms);
 
     // player lanes
     Mesh* playerSquare = object2D::CreateSquare("playerSquare", corner, squareSide, glm::vec3(6 / 255.f, 115 / 255.f, 145 / 255.f), true);  // cyan
@@ -125,18 +131,31 @@ void Tema1::Init()
 
     // init the hand the player gets
     playerHand = vector<Card*>();
-    DrawCards(handSize); // stored to playerHand
+    DrawCards(player, handSize); // stored to playerHand
+    DrawCards(enemy, handSize);
+
     Hand->printCards();
     //for (int i = 0; i < handSize; i++)
 
     // card drawer -- TODO: add shapes
-    for (int i = 0; i < playerHand.size(); i++) {
+    for (int i = 0; i < player->hand.size(); i++) {
         Mesh* tempCard;
 
-        switch (playerHand[i]->action) {                                    // i still dont really get why i need 3 coords to create a 2D square -- glm::vec3(playerHand[i]->pos, 0)
-        case ATK: tempCard = object2D::CreateSquare(playerHand[i]->name, corner, cardSize, glm::vec3(163 / 255.f, 0, 0), true); break;  // red
-        case DEF: tempCard = object2D::CreateSquare(playerHand[i]->name, corner, cardSize, glm::vec3(10 / 255.f, 125 / 255.f, 41 / 255.f), true); break;    // green
-        case HEAL: tempCard = object2D::CreateSquare(playerHand[i]->name, corner, cardSize, glm::vec3(0 / 255.f, 170 / 255.f, 217 / 255.f), true); break;   // blue
+        switch (player->hand[i]->action) {                                    // i still dont really get why i need 3 coords to create a 2D square -- glm::vec3(playerHand[i]->pos, 0)
+        case ATK: tempCard = object2D::CreateSquare(player->hand[i]->name, corner, cardSize, glm::vec3(163 / 255.f, 0, 0), true); break;  // red
+        case DEF: tempCard = object2D::CreateSquare(player->hand[i]->name, corner, cardSize, glm::vec3(10 / 255.f, 125 / 255.f, 41 / 255.f), true); break;    // green
+        case HEAL: tempCard = object2D::CreateSquare(player->hand[i]->name, corner, cardSize, glm::vec3(0 / 255.f, 170 / 255.f, 217 / 255.f), true); break;   // blue
+        }
+        AddMeshToList(tempCard);
+    }
+
+    for (int i = 0; i < enemy->hand.size(); i++) {
+        Mesh* tempCard;
+
+        switch (enemy->hand[i]->action) {                                    // i still dont really get why i need 3 coords to create a 2D square -- glm::vec3(playerHand[i]->pos, 0)
+        case ATK: tempCard = object2D::CreateSquare(enemy->hand[i]->name, corner, cardSize, glm::vec3(163 / 255.f, 0, 0), true); break;  // red
+        case DEF: tempCard = object2D::CreateSquare(enemy->hand[i]->name, corner, cardSize, glm::vec3(10 / 255.f, 125 / 255.f, 41 / 255.f), true); break;    // green
+        case HEAL: tempCard = object2D::CreateSquare(enemy->hand[i]->name, corner, cardSize, glm::vec3(0 / 255.f, 170 / 255.f, 217 / 255.f), true); break;   // blue
         }
         AddMeshToList(tempCard);
     }
@@ -182,19 +201,20 @@ void Tema1::Init()
  }
 
  // method to get 10 random cards from deck
-void Tema1::DrawCards(int count) {
+void Tema1::DrawCards(Player* p, int count) {
     //Hand->getSize();
     for (int i = 0; i < count; i++) {
         int id;
         do    // draw until you get card that was not drawn yet
-            id = rand() % playerDeck.size();
-        while (playerDeck[id]->wasDrawn);
+            id = rand() % p->deck.size();
+        while (p->deck[id]->wasDrawn);
 
-        playerDeck[id]->wasDrawn = true;    // drawn meaning picked
-        playerHand.push_back(playerDeck[id]);
-        tableCards.push_back(playerDeck[id]);   // get let the table have an evidence of all the cards in game
+        p->deck[id]->wasDrawn = true;    // drawn meaning picked
+        p->hand.push_back(p->deck[id]);
+        tableCards.push_back(p->deck[id]);   // get let the table have an evidence of all the cards in game
 
-        Hand->addCard(playerDeck[id]);
+        if (p->isPlayer == true)
+            Hand->addCard(p->deck[id]);
         //cout << playerDeck[id]->name << "is at coords [" << playerDeck[id]->pos.x << ", " << playerDeck[id]->pos.y << "]\n";
     }
 }
@@ -202,6 +222,8 @@ void Tema1::DrawCards(int count) {
 bool Tema1::getPlayerTurn() {
     return playerTurn;
 }
+
+
 
 void Tema1::FrameStart()
 {
@@ -225,12 +247,30 @@ void Tema1::Update(float deltaTimeSeconds)
     float barWidth= 0.19f * resolution.x - offset;
 	float barHeight = resolution.y - 2 * offset;
 
+    //for (int i = 0; i < tableCards.size(); i++) {
+    //    modelMatrix = glm::mat3(1);
+
+    //    modelMatrix *= transform2D::Translate(tableCards[i]->pos.x, tableCards[i]->pos.y);
+
+    //    modelMatrix *= transform2D::Translate(cx, cy);
+    //    modelMatrix *= transform2D::Scale(1, 1.5f);
+    //    modelMatrix *= transform2D::Translate(-cx, -cy);
+
+    //    // make outline a little thicker
+    //    glLineWidth(5.0f);
+    //    RenderMesh2D(meshes["cardOutline"], shaders["VertexColor"], modelMatrix);
+    //    glLineWidth(1.0f);
+
+    //    RenderMesh2D(meshes[tableCards[i]->name], shaders["VertexColor"], modelMatrix);
+
+    //    //modelMatrix *= transform2D::Translate(-0.05f * cardSize, -0.05f * cardSize);
+    //}
 
     // render cards in Hand
-    for (int i = 0; i < tableCards.size(); i++) {
+    for (int i = 0; i < player->hand.size(); i++) {
         modelMatrix = glm::mat3(1);
 
-        modelMatrix *= transform2D::Translate(tableCards[i]->pos.x, tableCards[i]->pos.y);
+        modelMatrix *= transform2D::Translate(player->hand[i]->pos.x, player->hand[i]->pos.y);
 
         modelMatrix *= transform2D::Translate(cx, cy);
         modelMatrix *= transform2D::Scale(1, 1.5f);
@@ -241,25 +281,28 @@ void Tema1::Update(float deltaTimeSeconds)
         RenderMesh2D(meshes["cardOutline"], shaders["VertexColor"], modelMatrix);
         glLineWidth(1.0f);
 
-        RenderMesh2D(meshes[tableCards[i]->name], shaders["VertexColor"], modelMatrix);
-
-        //modelMatrix *= transform2D::Translate(-0.05f * cardSize, -0.05f * cardSize);
+        RenderMesh2D(meshes[player->hand[i]->name], shaders["VertexColor"], modelMatrix);
     }
 
     // render cards on board lanes
-    //for (int l = 0; l < playerLanes.size(); l++) {
-    //    for (int i = 0; i < playerLanes[l]->cards.size(); i++) {
-    //        modelMatrix = glm::mat3(1);
+    for (int l = 0; l < playerLanes.size(); l++) {
+        for (int i = 0; i < playerLanes[l]->cards.size(); i++) {
+            modelMatrix = glm::mat3(1);
 
-    //        modelMatrix *= transform2D::Translate(playerLanes[l]->cards[i]->pos.x, playerLanes[l]->cards[i]->pos.y);
+            modelMatrix *= transform2D::Translate(playerLanes[l]->cards[i]->pos.x, playerLanes[l]->cards[i]->pos.y);
 
-    //        modelMatrix *= transform2D::Translate(cx, cy);
-    //        modelMatrix *= transform2D::Scale(1, 1.5f);
-    //        modelMatrix *= transform2D::Translate(-cx, -cy);
+            modelMatrix *= transform2D::Translate(cx, cy);
+            modelMatrix *= transform2D::Scale(1, 1.5f);
+            modelMatrix *= transform2D::Translate(-cx, -cy);
 
-    //        RenderMesh2D(meshes[playerHand[0]->name], shaders["VertexColor"], modelMatrix);
-    //    }
-    //}
+            // make outline a little thicker
+            glLineWidth(5.0f);
+            RenderMesh2D(meshes["cardOutline"], shaders["VertexColor"], modelMatrix);
+            glLineWidth(1.0f);
+
+            RenderMesh2D(meshes[playerLanes[l]->cards[i]->name], shaders["VertexColor"], modelMatrix);
+        }
+    }
 
     // render board
     modelMatrix = glm::mat3(1);
@@ -323,7 +366,17 @@ void Tema1::OnInputUpdate(float deltaTime, int mods)
 
     void Tema1::OnKeyPress(int key, int mods)
     {
+        if (playerTurn == false) {
+            cout << "It's not your turn yet!\n";
+            return;
+        }
+
         // Add key press event
+        if (key == GLFW_KEY_ENTER)
+        {
+            playerTurn = !playerTurn;
+            cout << "\nplayerTurn is now " << playerTurn << "\n";
+        }
     }
 
 
@@ -339,10 +392,10 @@ void Tema1::OnInputUpdate(float deltaTime, int mods)
         glm::ivec2 resolution = window->GetResolution();
         mouseY = resolution.y - mouseY; // invert mouseY for correct compute
 
-        for (int i = 0; i < playerHand.size(); i++) {
-            if (playerHand[i]->isDragged) {
-                playerHand[i]->pos.x = mouseX - cardSize / 2.0f;
-                playerHand[i]->pos.y = mouseY - cardSize / 2.0f;
+        for (int i = 0; i < player->hand.size(); i++) {
+            if (player->hand[i]->isDragged) {
+                player->hand[i]->pos.x = mouseX - cardSize / 2.0f;
+                player->hand[i]->pos.y = mouseY - cardSize / 2.0f;
             }
         }
     }
@@ -350,6 +403,11 @@ void Tema1::OnInputUpdate(float deltaTime, int mods)
 
     void Tema1::OnMouseBtnPress(int mouseX, int mouseY, int button, int mods)
     {
+        if (playerTurn == false) {
+            cout << "It's not your turn yet!\n";
+            return;
+        }
+
         //printf("Pressed %d\n", button);
         // Add mouse button press event
         glm::ivec2 resolution = window->GetResolution();
@@ -358,30 +416,51 @@ void Tema1::OnInputUpdate(float deltaTime, int mods)
         if (button == GLFW_MOUSE_BUTTON_2) {
             if (!isDragging) {
                 cout << "mouseX = " << mouseX << "; mouseY = " << mouseY << "\n";
-                for (int i = 0; i < playerHand.size(); i++) {
-                    if ((mouseX >= playerHand[i]->pos.x && mouseX <= playerHand[i]->pos.x + cardSize
-                        && mouseY >= playerHand[i]->pos.y && mouseY <= playerHand[i]->pos.y + cardSize
-                        || playerHand[i]->isDragged) && !playerHand[i]->used) {
-                        cout << "Moving " << playerHand[i]->name << "\n";
-                        //playerDeck[i]->pos.x = mouseX;
-                        //playerDeck[i]->pos.y = mouseY;ea
-                        playerHand[i]->isSelected = true;   // TODO remember to deselect at some point
-                        playerHand[i]->isDragged = true;    // TODO remember to turn false when btn release
+                // dragging card from hand
+                for (int i = 0; i < player->hand.size(); i++) {
+                    if ((mouseX >= player->hand[i]->pos.x && mouseX <= player->hand[i]->pos.x + cardSize
+                        && mouseY >= player->hand[i]->pos.y && mouseY <= player->hand[i]->pos.y + cardSize
+                        || player->hand[i]->isDragged) && !player->hand[i]->used) {
+
+                        cout << "Moving " << player->hand[i]->name << "\n";
+
+                        player->hand[i]->isSelected = true;
+                        player->hand[i]->isDragged = true;    // TODO remember to turn false when btn release
 
                         // game state variables
                         //cout << "setting isDragging to true\n";
                         isDragging = true;
-                        draggedCard = playerHand[i];    // card that is going to be dragged
-                        cout << "dragging " << playerHand[i]->name << " of type " << playerHand[i]->type << "\n";
+                        draggedCard = player->hand[i];    // card that is going to be dragged
+                        cout << "dragging " << player->hand[i]->name << " of type " << player->hand[i]->type << "\n";
 
-                        playerHand[i]->initPos = playerHand[i]->pos;
+                        player->hand[i]->initPos = player->hand[i]->pos;
 
                         // DEVNOTE TODO: consider removing break once cards don't overlap
                         break;
                     }
 
-                    if (!playerHand[i]->isDragged) {
-                        playerHand[i]->isSelected = false;  // deselect if i drag a different card
+                    if (!player->hand[i]->isDragged) {
+                        player->hand[i]->isSelected = false;  // deselect if i drag a different card
+                    }
+                }
+
+                // undo move - bring card back to hand
+                for (int l = 0; l < playerLanes.size(); l++) {
+                    for (int i = 0; i < playerLanes[l]->cards.size(); i++) {
+                        if ((mouseX >= playerLanes[l]->cards[i]->pos.x && mouseX <= playerLanes[l]->cards[i]->pos.x + cardSize
+                            && mouseY >= playerLanes[l]->cards[i]->pos.y && mouseY <= playerLanes[l]->cards[i]->pos.y + cardSize
+                            && !playerLanes[l]->cards[i]->isDragged) && playerLanes[l]->cards[i]->used) {
+
+                            cout << "Moving " << player->hand[i]->name << "back to hand\n";
+                            
+                            playerLanes[l]->cards[i]->used = false;
+                            Hand->addCard(playerLanes[l]->cards[i]);
+                            player->hand = Hand->cards;
+
+                            playerLanes[l]->removeCard(playerLanes[l]->cards[i]);
+                            
+                            break;
+                        }
                     }
                 }
             }
@@ -398,6 +477,10 @@ void Tema1::OnInputUpdate(float deltaTime, int mods)
                         draggedCard->pos = playerLanes[i]->getCenter(); // place card on center
                         playerLanes[i]->addCard(draggedCard);
                         Hand->removeCard(draggedCard);
+
+                        // update player hand after removing draggedCard -- remove if you end up going with Lane enemy hand approach
+                        player->hand = Hand->cards;
+
                         draggedCard->used = true;
 
                         break;
