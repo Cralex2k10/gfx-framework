@@ -134,8 +134,13 @@ void Tema1::Init()
     DrawCards(player, handSize); // stored to playerHand
     DrawCards(enemy, handSize);
 
+    cout << "\nPlayer cards:\n";
     Hand->printCards();
-    //for (int i = 0; i < handSize; i++)
+
+    cout << "\nEnemy cards:\n";
+    for (Card* card : enemy->hand) {
+        cout << card->name << "\n";
+    }
 
     // card drawer -- TODO: add shapes
     for (int i = 0; i < player->hand.size(); i++) {
@@ -266,6 +271,41 @@ void Tema1::Update(float deltaTimeSeconds)
     //    //modelMatrix *= transform2D::Translate(-0.05f * cardSize, -0.05f * cardSize);
     //}
 
+    // bot move logic
+    if (playerTurn == false) {
+        while (enemy->cardsPlayed == 0)
+            enemy->cardsPlayed = rand() % maxCardsPlayed;
+
+        for (int i = 0; i < enemy->cardsPlayed; i++) {
+            
+            // compute final scores and announce winner 
+            // -- or skip turn entirely until player drains all enemy hp or also runs out of cards
+            if (enemy->hand.size() == 0)
+                break;
+
+            int id = rand() % enemy->hand.size();
+
+            // place randomly selected card in correct lane
+            for (Lane* lane : enemyLanes) {
+                if (lane->type == enemy->hand[id]->type) {
+                    lane->addCard(enemy->hand[id]);
+                    cout << "\nEnemy played " << enemy->hand[id]->name << "\n";
+
+                    // remove card from hand
+                    auto it = std::find(enemy->hand.begin(), enemy->hand.end(), enemy->hand[id]);
+                    if (it != enemy->hand.end()) {
+                        enemy->hand.erase(it);
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        playerTurn = !playerTurn;
+    }
+        
+
     // render cards in Hand
     for (int i = 0; i < player->hand.size(); i++) {
         modelMatrix = glm::mat3(1);
@@ -284,7 +324,7 @@ void Tema1::Update(float deltaTimeSeconds)
         RenderMesh2D(meshes[player->hand[i]->name], shaders["VertexColor"], modelMatrix);
     }
 
-    // render cards on board lanes
+    // render cards on player lanes
     for (int l = 0; l < playerLanes.size(); l++) {
         for (int i = 0; i < playerLanes[l]->cards.size(); i++) {
             modelMatrix = glm::mat3(1);
@@ -301,6 +341,26 @@ void Tema1::Update(float deltaTimeSeconds)
             glLineWidth(1.0f);
 
             RenderMesh2D(meshes[playerLanes[l]->cards[i]->name], shaders["VertexColor"], modelMatrix);
+        }
+    }
+
+    // render cards on enemy lanes
+    for (int l = 0; l < enemyLanes.size(); l++) {
+        for (int i = 0; i < enemyLanes[l]->cards.size(); i++) {
+            modelMatrix = glm::mat3(1);
+
+            modelMatrix *= transform2D::Translate(enemyLanes[l]->cards[i]->pos.x, enemyLanes[l]->cards[i]->pos.y);
+
+            modelMatrix *= transform2D::Translate(cx, cy);
+            modelMatrix *= transform2D::Scale(1, 1.5f);
+            modelMatrix *= transform2D::Translate(-cx, -cy);
+
+            // make outline a little thicker
+            glLineWidth(5.0f);
+            RenderMesh2D(meshes["cardOutline"], shaders["VertexColor"], modelMatrix);
+            glLineWidth(1.0f);
+
+            RenderMesh2D(meshes[enemyLanes[l]->cards[i]->name], shaders["VertexColor"], modelMatrix);
         }
     }
 
@@ -375,6 +435,9 @@ void Tema1::OnInputUpdate(float deltaTime, int mods)
         if (key == GLFW_KEY_ENTER)
         {
             playerTurn = !playerTurn;
+            player->cardsPlayed = 0;
+            enemy->cardsPlayed = 0;
+
             cout << "\nplayerTurn is now " << playerTurn << "\n";
         }
     }
@@ -422,6 +485,11 @@ void Tema1::OnInputUpdate(float deltaTime, int mods)
                         && mouseY >= player->hand[i]->pos.y && mouseY <= player->hand[i]->pos.y + cardSize
                         || player->hand[i]->isDragged) && !player->hand[i]->used) {
 
+                        if (player->cardsPlayed >= maxCardsPlayed) {
+                            cout << "\nAlready played " << maxCardsPlayed << " cards! End turn or deselect other cards.\n";
+                            return;
+                        }
+
                         cout << "Moving " << player->hand[i]->name << "\n";
 
                         player->hand[i]->isSelected = true;
@@ -458,6 +526,7 @@ void Tema1::OnInputUpdate(float deltaTime, int mods)
                             player->hand = Hand->cards;
 
                             playerLanes[l]->removeCard(playerLanes[l]->cards[i]);
+                            player->cardsPlayed--;
                             
                             break;
                         }
@@ -477,6 +546,8 @@ void Tema1::OnInputUpdate(float deltaTime, int mods)
                         draggedCard->pos = playerLanes[i]->getCenter(); // place card on center
                         playerLanes[i]->addCard(draggedCard);
                         Hand->removeCard(draggedCard);
+
+                        player->cardsPlayed++;
 
                         // update player hand after removing draggedCard -- remove if you end up going with Lane enemy hand approach
                         player->hand = Hand->cards;

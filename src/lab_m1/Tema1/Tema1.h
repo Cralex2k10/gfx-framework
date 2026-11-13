@@ -93,6 +93,8 @@ namespace m1
         int roundScore;
         int roundsWon;
         int hp;
+
+        int cardsPlayed;
     };
 
     class Tema1 : public gfxc::SimpleScene
@@ -163,5 +165,6 @@ namespace m1
         //std::vector<Card*> northernRealmsDeck;
 
         bool playerTurn;
+        int maxCardsPlayed = 3;
     };
 }   // namespace m1

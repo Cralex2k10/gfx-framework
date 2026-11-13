@@ -16,6 +16,8 @@ Player::Player(bool isPlayer, vector<Card*> deck) {
 	this->roundScore = 0;
 	this->roundsWon = 0;
 	this->hp = 30;	// subject to change
+
+	this->cardsPlayed = 0;	// resets to 0 every turn
 }
 
 Player::~Player() 
