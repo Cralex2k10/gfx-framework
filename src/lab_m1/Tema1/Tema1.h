@@ -63,7 +63,7 @@ namespace m1
         //glm::vec2 center;   // center of lane -- is it necessary???
         glm::vec2 pos;
 
-        int totalAtk, totalDef, totalHeal;
+        int laneAtk, laneDef, laneHeal;
 
         Lane(const std::string& type, bool isPlayer, bool* playerTurn, Mesh* shape);
         ~Lane();
@@ -74,25 +74,29 @@ namespace m1
         void addCard(Card* card);
         void removeCard(Card* card);
         void updateCardsPos();
+        glm::vec3 computeScores();   // x = dmg, y = def, z = heal
         void setSize(float width, float height);
         void getSize();
         void setPos(float x, float y);
         void printCards();
+        void resetStats();
     };
 
     class Player {
     public:
         Player(bool isPlayer, std::vector<Card*> deck);
         ~Player();
+        void printScores();
 
     public:
         bool isPlayer;
         std::vector<Card*> deck;
         std::vector<Card*> hand;
         std::string name;
-        int roundScore;
+        glm::vec3 roundScore;
         int roundsWon;
         int hp;
+        int maxHP = 30;
 
         int cardsPlayed;
     };
@@ -123,6 +127,7 @@ namespace m1
         //void DrawCard(std::string& type);
         void DrawCards(Player* player, int count);
         bool getPlayerTurn();
+        void checkRoundEnd();
 
     protected:
         float cx, cy;
@@ -165,6 +170,10 @@ namespace m1
         //std::vector<Card*> northernRealmsDeck;
 
         bool playerTurn;
-        int maxCardsPlayed = 3;
+        int turnsPlayed;
+        int maxCardsPlayed = 1;
+
+        int hpTileWidth = 30;
+        int hpTileHeight = 10;
     };
 }   // namespace m1

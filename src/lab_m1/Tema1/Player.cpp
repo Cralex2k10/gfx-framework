@@ -13,13 +13,17 @@ Player::Player(bool isPlayer, vector<Card*> deck) {
 	this->isPlayer = isPlayer;
 	this->deck = deck;
 	this->hand = vector<Card*>();
-	this->roundScore = 0;
+	this->roundScore = glm::vec3(0);
 	this->roundsWon = 0;
-	this->hp = 30;	// subject to change
+	this->hp = maxHP;
 
 	this->cardsPlayed = 0;	// resets to 0 every turn
 }
 
 Player::~Player() 
 {
+}
+
+void Player::printScores() {
+	cout << "\nTotal " << (this->isPlayer ? "player" : "enemy") << " scores: ATK = " << roundScore.x << ", DEF = " << roundScore.y << ", HEAL = " << roundScore.z << "\n";
 }

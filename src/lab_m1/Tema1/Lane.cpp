@@ -27,9 +27,9 @@ Lane::Lane(const std::string& type, bool isPlayer, bool* playerTurn, Mesh* shape
 	this->pos.y = 0;
 
 	this->cards = vector<Card*>();
-	this->totalAtk = 0;	// decrease enemy HP
-	this->totalDef = 0;	// decrease enemy DMG
-	this->totalHeal = 0;	// increase own HP (TODO: BEFORE or AFTER dealing damage?)
+	this->laneAtk = 0;	// decrease enemy HP
+	this->laneDef = 0;	// decrease enemy DMG
+	this->laneHeal = 0;	// increase own HP (TODO: BEFORE or AFTER dealing damage?)
 }
 
 Lane::~Lane() 
@@ -80,11 +80,11 @@ void Lane::updateCardsPos() {
 	if (this->cards.size() % 2 == 0) {
 		// sort for even number of cards
 		for (int i = 0; i < cards.size() / 2; i++) {	// first half of lane cards (drawn to the left of the lane's center)
-			cards[i]->pos.x = actualCenter.x - (cards.size() / 2 - (i + 1)) * (cards[i]->width + offset);
+			cards[i]->pos.x = actualCenter.x - (cards.size() / 2 - (i + 0.5f)) * (cards[i]->width + offset);
 			cards[i]->pos.y = actualCenter.y;
 		}
 		for (int i = 0; i < cards.size() / 2; i++) {	// second half of lane cards (drawn to the right of the lane's center)
-			cards[cards.size() / 2 + i]->pos.x = actualCenter.x + (i + 1) * (cards[cards.size() / 2 + i]->width + offset);
+			cards[cards.size() / 2 + i]->pos.x = actualCenter.x + (i + 0.5f) * (cards[cards.size() / 2 + i]->width + offset);
 			cards[cards.size() / 2 + i]->pos.y = actualCenter.y;
 		}
 	}
@@ -128,6 +128,19 @@ void Lane::removeCard(Card* card) {
 	updateCardsPos();
 }
 
+glm::vec3 Lane::computeScores() {
+	for (Card* card : cards) {
+		if (card->action == ATK)
+			laneAtk = card->value;
+		if (card->action == DEF)
+			laneDef = card->value;
+		if (card->action == HEAL)
+			laneHeal = card->value;
+	}
+
+	return glm::vec3(laneAtk, laneDef, laneHeal);
+}
+
 // separate function in case i want to resize dynamically for some reason
 void Lane::setSize(float width, float height) {
 	this->width = width;
@@ -150,4 +163,10 @@ void Lane::printCards() {
 	for (int i = 0; i < cards.size(); i++) {
 		cout << cards[i]->name << "\n";
 	}
+}
+
+void Lane::resetStats() {
+	this->laneAtk = 0;
+	//this->laneDef = 0;	// def should probably remain turn by turn
+	this->laneHeal = 0;
 }
