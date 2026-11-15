@@ -104,6 +104,53 @@ Mesh* object2D::CreatePentagon(
     return pentagon;
 }
 
+Mesh* object2D::CreateCircle(
+    const std::string& name,
+    glm::vec3 leftBottomCorner,
+    float length,
+    glm::vec3 color,
+    bool fill)
+{
+    glm::vec3 corner = leftBottomCorner;
+    float r = length * 0.5f;
+    float d = r * sin(RADIANS(45));         // sin() = d / r
+    glm::vec3 center = corner + glm::vec3(r, r, 0);
+
+    std::vector<VertexFormat> vertices =
+    {   // triunghiuri isoscele
+        VertexFormat(center, color),
+        VertexFormat(center + glm::vec3(-d, d, 0), color),
+        VertexFormat(center + glm::vec3(-r, 0, 0), color),
+        VertexFormat(center + glm::vec3(-d, -d, 0), color),
+        VertexFormat(center + glm::vec3(0, -r, 0), color),
+        VertexFormat(center + glm::vec3(d, -d, 0), color),
+        VertexFormat(center + glm::vec3(r, 0, 0), color),
+        VertexFormat(center + glm::vec3(d, d, 0), color),
+        VertexFormat(center + glm::vec3(0, r, 0), color)
+    };
+
+    Mesh* circle = new Mesh(name);
+    std::vector<unsigned int> indices = { 1, 2, 3, 4, 5, 6, 7, 8 };
+
+    if (!fill) {
+        circle->SetDrawMode(GL_LINE_LOOP);
+    }
+    else {
+        // Draw 2 triangles. Add the remaining 2 indices
+        indices = { 1, 2, 0,
+                    2, 3, 0,
+                    3, 4, 0,
+                    4, 5, 0,
+                    5, 6, 0,
+                    6, 7, 0,
+                    7, 8, 0,
+                    8, 1, 0 };
+    }
+
+    circle->InitFromData(vertices, indices);
+    return circle;
+}
+
 Mesh* object2D::CreateShield(
     const std::string& name,
     glm::vec3 leftBottomCorner,

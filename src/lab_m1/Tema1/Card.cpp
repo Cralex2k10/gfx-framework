@@ -37,6 +37,8 @@ Card::Card(const std::string& name, cardAction action, cardType type, int value)
 		case ATK: this->turnsActive = 1; break;
 		case DEF: this->turnsActive = 3; break;
 		case HEAL: this->turnsActive = 1; break;
+		case CLEAR: this->turnsActive = 1; break;
+		case FROST: this->turnsActive = 4; break;
 	}
 
 	// TODO change to update automatically on lane sort

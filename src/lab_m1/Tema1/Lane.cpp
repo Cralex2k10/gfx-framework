@@ -30,6 +30,7 @@ Lane::Lane(const std::string& type, bool isPlayer, bool* playerTurn, Mesh* shape
 	this->laneAtk = 0;	// decrease enemy HP
 	this->laneDef = 0;	// decrease enemy DMG
 	this->laneHeal = 0;	// increase own HP (TODO: BEFORE or AFTER dealing damage?)
+	this->frost = false;
 }
 
 Lane::~Lane() 
@@ -50,7 +51,7 @@ bool Lane::isInLane(float x, float y) {
 }
 
 bool Lane::isValid(Card* card) {
-	if (this->isPlayer == *(bool *)playerTurn && this->type == card->type) {
+	if ((this->isPlayer == *(bool*)playerTurn || (this->isPlayer != *(bool*)playerTurn && card->action == FROST)) && this->type == card->type || card->action == CLEAR) {
 		return true;
 	}
 	return false;
@@ -144,16 +145,39 @@ glm::vec3 Lane::computeScores() {
 		if (card->action == ATK && card->turnsActive != 0) {
 			laneAtk += card->value;
 			card->turnsActive--;
+
+			if (this->frost)
+				laneAtk -= 1;
 		}
 
 		if (card->action == DEF && card->turnsActive != 0) {
 			laneDef += card->value;
 			card->turnsActive--;
 			//card->scored = true;	// UNCOMMENT if you want to not keep def scores over turns
+
+			if (this->frost)
+				laneAtk -= 1;
 		}
 
 		if (card->action == HEAL && card->turnsActive != 0) {
 			laneHeal += card->value;
+			card->turnsActive--;
+
+			if (this->frost)
+				laneAtk -= 1;
+		}
+
+		if (card->action == FROST && card->turnsActive != 0) {
+			this->frost = true;
+			card->turnsActive--;
+		}
+
+		if (card->action == FROST && card->turnsActive == 0) {
+			this->frost = false;
+		}
+
+		if (card->action == CLEAR && card->turnsActive != 0) {
+			this->frost = false;
 			card->turnsActive--;
 		}
 	}

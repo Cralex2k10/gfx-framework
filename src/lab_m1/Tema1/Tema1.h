@@ -79,6 +79,7 @@ namespace m1
         glm::vec2 pos;
 
         int laneAtk, laneDef, laneHeal;
+        bool frost;
 
         Lane(const std::string& type, bool isPlayer, bool* playerTurn, Mesh* shape);
         ~Lane();

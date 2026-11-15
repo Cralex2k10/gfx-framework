@@ -57,10 +57,10 @@ vector<Card*> Tema1::CreateDeck(const string& name) {
             new Card("Thaler", ATK, SIEGE, 1),   // TODO: turn into spy later
             //new Card("Clear Weather", CLEAR, ANY, 0),
             //new Card("Clear Weather", CLEAR, ANY, 0),
-            //new Card("Biting Frost", FROST, MELEE, -1),
-            //new Card("Biting Frost", FROST, MELEE, -1),
-            //new Card("Impenetrable Fog", FROST, RANGED, -1),
-            //new Card("Torrential Rain", FROST, SIEGE, -1)
+            new Card("Biting Frost", FROST, MELEE, -1),
+            new Card("Biting Frost", FROST, MELEE, -1),
+            new Card("Impenetrable Fog", FROST, RANGED, -1),
+            new Card("Torrential Rain", FROST, SIEGE, -1)
         };
     }
 
@@ -161,6 +161,10 @@ void Tema1::Init()
 
     Mesh* siege = object2D::CreatePentagon("siege", corner, squareSide, glm::vec3(230 / 255.f, 214 / 255.f, 41 / 255.f), true); // Yellow
     AddMeshToList(siege);
+    
+    // for clear weather
+    Mesh* any = object2D::CreateCircle("any", corner, squareSide, glm::vec3(230 / 255.f, 214 / 255.f, 41 / 255.f), true); // Yellow
+    AddMeshToList(any);
 
     // init hand, set size and pos and drawn cards in hand
 	Hand = new Lane("Hand", true, &playerTurn, playerHandLane);
@@ -188,8 +192,8 @@ void Tema1::Init()
             case ATK: tempCard = object2D::CreateSquare(player->hand[i]->name, corner, cardSize, glm::vec3(163 / 255.f, 0, 0), true); break;  // red
             case DEF: tempCard = object2D::CreateSquare(player->hand[i]->name, corner, cardSize, glm::vec3(0 / 255.f, 170 / 255.f, 217 / 255.f), true); break;  // blue
             case HEAL: tempCard = object2D::CreateSquare(player->hand[i]->name, corner, cardSize, glm::vec3(10 / 255.f, 125 / 255.f, 41 / 255.f), true); break; // green
-            //case CLEAR: tempCard = object2D::CreateSquare(player->hand[i]->name, corner, cardSize, glm::vec3(227 / 255.f, 166 / 255.f, 0 / 255.f), true); break;    // golden
-            //case FROST: tempCard = object2D::CreateSquare(player->hand[i]->name, corner, cardSize, glm::vec3(1, 1, 1), true); break;    // white
+            case CLEAR: tempCard = object2D::CreateSquare(player->hand[i]->name, corner, cardSize, glm::vec3(184 / 255.f, 142 / 255.f, 29 / 255.f), true); break;    // golden
+            case FROST: tempCard = object2D::CreateSquare(player->hand[i]->name, corner, cardSize, glm::vec3(1, 1, 1), true); break;    // white
         }
         AddMeshToList(tempCard);
     }
@@ -201,8 +205,8 @@ void Tema1::Init()
             case ATK: tempCard = object2D::CreateSquare(enemy->hand[i]->name, corner, cardSize, glm::vec3(163 / 255.f, 0, 0), true); break;  // red
             case DEF: tempCard = object2D::CreateSquare(enemy->hand[i]->name, corner, cardSize, glm::vec3(0 / 255.f, 170 / 255.f, 217 / 255.f), true); break;    // blue
             case HEAL: tempCard = object2D::CreateSquare(enemy->hand[i]->name, corner, cardSize, glm::vec3(10 / 255.f, 125 / 255.f, 41 / 255.f), true); break;   // green
-            //case CLEAR: tempCard = object2D::CreateSquare(enemy->hand[i]->name, corner, cardSize, glm::vec3(227 / 255.f, 166 / 255.f, 0 / 255.f), true); break;    // golden
-            //case FROST: tempCard = object2D::CreateSquare(enemy->hand[i]->name, corner, cardSize, glm::vec3(1, 1, 1), true); break;    // white
+            case CLEAR: tempCard = object2D::CreateSquare(enemy->hand[i]->name, corner, cardSize, glm::vec3(184 / 255.f, 142 / 255.f, 29 / 255.f), true); break;    // golden
+            case FROST: tempCard = object2D::CreateSquare(enemy->hand[i]->name, corner, cardSize, glm::vec3(1, 1, 1), true); break;    // white
         }
         AddMeshToList(tempCard);
     }
@@ -343,20 +347,63 @@ void Tema1::Update(float deltaTimeSeconds)
             int id = rand() % enemy->hand.size();
 
             // place randomly selected card in correct lane
-            for (Lane* lane : enemyLanes) {
-                if (lane->type == enemy->hand[id]->type) {
-                    lane->addCard(enemy->hand[id]);
-                    cout << "\nEnemy played " << enemy->hand[id]->name << "\n";
 
-                    // remove card from hand
-                    auto it = std::find(enemy->hand.begin(), enemy->hand.end(), enemy->hand[id]);
-                    if (it != enemy->hand.end()) {
-                        enemy->hand.erase(it);
+
+            if (enemy->hand[id]->action == CLEAR) {
+                cout << "\nEnemy played " << enemy->hand[id]->name << "\n";
+
+                for (Lane* lane : enemyLanes) {
+                    for (Card* card : lane->cards) {
+                        if (card->action == CLEAR || card->action == FROST) {
+                            lane->removeCard(card);
+                        }
                     }
+                }
 
-                    break;
+                for (Lane* lane : playerLanes) {
+                    for (Card* card : lane->cards) {
+                        if (card->action == CLEAR || card->action == FROST) {
+                            lane->removeCard(card);
+                        }
+                    }
                 }
             }
+            else {
+                // special case for FROST and SPY if i have the time
+                if (enemy->hand[id]->action == FROST) {
+                    for (Lane* lane : playerLanes) {
+                        if (lane->type == enemy->hand[id]->type) {
+                            lane->addCard(enemy->hand[id]);
+                            cout << "\nEnemy played " << enemy->hand[id]->name << "\n";
+
+                            // remove card from hand
+                            auto it = std::find(enemy->hand.begin(), enemy->hand.end(), enemy->hand[id]);
+                            if (it != enemy->hand.end()) {
+                                enemy->hand.erase(it);
+                            }
+
+                            break;
+                        }
+                    }
+                }
+                else {  // case for other cards
+                    for (Lane* lane : enemyLanes) {
+                        if (lane->type == enemy->hand[id]->type) {
+                            lane->addCard(enemy->hand[id]);
+                            cout << "\nEnemy played " << enemy->hand[id]->name << "\n";
+
+                            // remove card from hand
+                            auto it = std::find(enemy->hand.begin(), enemy->hand.end(), enemy->hand[id]);
+                            if (it != enemy->hand.end()) {
+                                enemy->hand.erase(it);
+                            }
+
+                            break;
+                        }
+                    }
+                }
+            }
+
         }
 
         enemy->roundScore = glm::vec3(0);
@@ -417,12 +464,6 @@ void Tema1::Update(float deltaTimeSeconds)
 
     // render cards on player lanes
     for (int l = 0; l < playerLanes.size(); l++) {
-        modelMatrix = glm::mat3(1);
-
-        modelMatrix *= transform2D::Translate(playerLanes[l]->pos.x + 20, playerLanes[l]->pos.y + playerLanes[l]->height / 4);
-        modelMatrix *= transform2D::Scale(laneIconSize * 2, laneIconSize * 2);
-        RenderMesh2D(meshes[playerLanes[l]->type], shaders["VertexColor"], modelMatrix);
-
         for (int i = 0; i < playerLanes[l]->cards.size(); i++) {
             {
                 // draw icon
@@ -456,12 +497,6 @@ void Tema1::Update(float deltaTimeSeconds)
 
     // render cards on enemy lanes
     for (int l = 0; l < enemyLanes.size(); l++) {
-        modelMatrix = glm::mat3(1);
-
-        modelMatrix *= transform2D::Translate(enemyLanes[l]->pos.x + 20, enemyLanes[l]->pos.y + enemyLanes[l]->height / 4);
-        modelMatrix *= transform2D::Scale(laneIconSize * 2, laneIconSize * 2);
-        RenderMesh2D(meshes[playerLanes[l]->type], shaders["VertexColor"], modelMatrix);
-
         for (int i = 0; i < enemyLanes[l]->cards.size(); i++) {
             {
                 // draw icon
@@ -507,6 +542,14 @@ void Tema1::Update(float deltaTimeSeconds)
 
     // render player lanes
     for (int i = 0; i < 3; i++) {
+        // draw the lane's icons (type)
+        modelMatrix = glm::mat3(1);
+
+        modelMatrix *= transform2D::Translate(playerLanes[i]->pos.x + 20, playerLanes[i]->pos.y + playerLanes[i]->height / 4);
+        modelMatrix *= transform2D::Scale(laneIconSize * 2, laneIconSize * 2);
+        RenderMesh2D(meshes[playerLanes[i]->type], shaders["VertexColor"], modelMatrix);
+
+        // draw the lane itself
         modelMatrix = glm::mat3(1);
         
         //playerLanes[i]->setPos(translateX, translateY + i * (scaleY + offset));
@@ -523,6 +566,14 @@ void Tema1::Update(float deltaTimeSeconds)
 
 	// render enemy lanes
     for (int i = 0; i < 3; i++) {
+        // draw lane's icon
+        modelMatrix = glm::mat3(1);
+
+        modelMatrix *= transform2D::Translate(enemyLanes[i]->pos.x + 20, enemyLanes[i]->pos.y + enemyLanes[i]->height / 4);
+        modelMatrix *= transform2D::Scale(laneIconSize * 2, laneIconSize * 2);
+        RenderMesh2D(meshes[enemyLanes[i]->type], shaders["VertexColor"], modelMatrix);
+
+        // draw the lane itself
         modelMatrix = glm::mat3(1);
         modelMatrix *= transform2D::Translate(enemyLanes[i]->pos.x, enemyLanes[i]->pos.y);
         modelMatrix *= transform2D::Scale(enemyLanes[i]->width, enemyLanes[i]->height);
@@ -992,25 +1043,68 @@ void Tema1::OnMouseBtnPress(int mouseX, int mouseY, int button, int mods)
         else { // if is dragging and click again
             cout << "checking lanes...\n";
             bool foundValidLane = false;
-            for (int i = 0; i < 3; i++) {
-                // TODO lane check
-                if (playerLanes[i]->isInLane(mouseX, mouseY) && playerLanes[i]->isValid(draggedCard)) {
-                    cout << "adding card " << draggedCard->name << " to lane " << playerLanes[i]->type << "\n";
-                    foundValidLane = true;
 
-                    cout << "center of lane = " << playerLanes[i]->getCenter() << "\n";
-                    draggedCard->pos = playerLanes[i]->getCenter(); // place card on center
-                    playerLanes[i]->addCard(draggedCard);
-                    Hand->removeCard(draggedCard);
+            if (draggedCard->action == CLEAR) {
+                for (Lane* lane : enemyLanes) {
+                    for (Card* card : lane->cards) {
+                        if (card->action == CLEAR) {
+                            lane->removeCard(card);
+                        }
+                    }
+                }
 
-                    player->cardsPlayed++;
+                for (Lane* lane : playerLanes) {
+                    for (Card* card : lane->cards) {
+                        if (card->action == CLEAR) {
+                            lane->removeCard(card);
+                        }
+                    }
+                }
+            }
 
-                    // update player hand after removing draggedCard -- remove if you end up going with Lane enemy hand approach
-                    player->hand = Hand->cards;
+            if (draggedCard->action == FROST) {
+                for (int i = 0; i < 3; i++) {
+                    if (enemyLanes[i]->isInLane(mouseX, mouseY) && enemyLanes[i]->isValid(draggedCard)) {
+                        cout << "adding card " << draggedCard->name << " to lane " << enemyLanes[i]->type << "\n";
+                        foundValidLane = true;
 
-                    draggedCard->used = true;
+                        cout << "center of lane = " << enemyLanes[i]->getCenter() << "\n";
+                        draggedCard->pos = enemyLanes[i]->getCenter(); // place card on center
+                        enemyLanes[i]->addCard(draggedCard);
+                        Hand->removeCard(draggedCard);
 
-                    break;
+                        player->cardsPlayed++;
+
+                        // update player hand after removing draggedCard -- remove if you end up going with Lane enemy hand approach
+                        player->hand = Hand->cards;
+
+                        draggedCard->used = true;
+
+                        break;
+                    }
+                }
+            }
+            else {
+                for (int i = 0; i < 3; i++) {
+                    // TODO lane check
+                    if (playerLanes[i]->isInLane(mouseX, mouseY) && playerLanes[i]->isValid(draggedCard)) {
+                        cout << "adding card " << draggedCard->name << " to lane " << playerLanes[i]->type << "\n";
+                        foundValidLane = true;
+
+                        cout << "center of lane = " << playerLanes[i]->getCenter() << "\n";
+                        draggedCard->pos = playerLanes[i]->getCenter(); // place card on center
+                        playerLanes[i]->addCard(draggedCard);
+                        Hand->removeCard(draggedCard);
+
+                        player->cardsPlayed++;
+
+                        // update player hand after removing draggedCard -- remove if you end up going with Lane enemy hand approach
+                        player->hand = Hand->cards;
+
+                        draggedCard->used = true;
+
+                        break;
+                    }
                 }
             }
             if (!foundValidLane) {  // reset position, no new valid position found
@@ -1018,7 +1112,7 @@ void Tema1::OnMouseBtnPress(int mouseX, int mouseY, int button, int mods)
 
                 draggedCard->pos = draggedCard->initPos;
             }
-                
+
             // stop dragging regardless of outcome
             draggedCard->isSelected = false;  // I'd prever if it remained selected on invalid input
             draggedCard->isDragged = false;
