@@ -26,4 +26,5 @@ Player::~Player()
 
 void Player::printScores() {
 	cout << "\nTotal " << (this->isPlayer ? "player" : "enemy") << " scores: ATK = " << roundScore.x << ", DEF = " << roundScore.y << ", HEAL = " << roundScore.z << "\n";
+	//this->roundScore = glm::vec3(0);
 }

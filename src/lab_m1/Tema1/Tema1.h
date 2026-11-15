@@ -7,14 +7,22 @@ namespace m1
     enum cardAction {
         ATK,    // TODO: red
         DEF,    // TODO: blue
-        HEAL   // TODO: green
+        HEAL,   // TODO: green
+        CLEAR,  // TODO: yellow
+        FROST // TODO: white
     };
 
     enum cardType {
         MELEE,
         RANGED,
-        SIEGE
+        SIEGE,
+        ANY
     };
+
+    //enum bonusAction {
+    //    NONE,
+    //    WEATHER
+    //};
 
     // inline means the compiler replaces the method header with the method code at every turn
     // DEVNOTE: read this if you get lost again: https://www.geeksforgeeks.org/cpp/inline-functions-cpp/
@@ -26,6 +34,8 @@ namespace m1
                 return "ranged";
             case SIEGE:
                 return "siege";
+            case ANY:
+                return "any";
         }
     }
 
@@ -36,6 +46,11 @@ namespace m1
         bool isDragged;
         bool wasDrawn;
         bool used;
+        bool scored;
+        bool returnable;
+
+        int turnsActive;
+
         std::string name;
         cardAction action;
         std::string type;
@@ -80,6 +95,7 @@ namespace m1
         void setPos(float x, float y);
         void printCards();
         void resetStats();
+        void clearLane();
     };
 
     class Player {
@@ -96,7 +112,7 @@ namespace m1
         glm::vec3 roundScore;
         int roundsWon;
         int hp;
-        int maxHP = 30;
+        int maxHP = 15;
 
         int cardsPlayed;
     };
@@ -125,13 +141,17 @@ namespace m1
         
         // student-defined methods
         //void DrawCard(std::string& type);
+        std::vector<Card*> CreateDeck(const std::string& name);
         void DrawCards(Player* player, int count);
         bool getPlayerTurn();
         void checkRoundEnd();
+        void startRound();
 
     protected:
         float cx, cy;
         glm::mat3 modelMatrix;
+        glm::vec2 baseRes;
+
         float translateX, translateY;
         float scaleX, scaleY, offset;
         float angularStep;
@@ -175,5 +195,9 @@ namespace m1
 
         int hpTileWidth = 30;
         int hpTileHeight = 10;
+        int wonRoundSize = 40;
+        int laneIconSize = 20;
+
+        bool gameOngoing;
     };
 }   // namespace m1

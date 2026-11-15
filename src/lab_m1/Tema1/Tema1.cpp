@@ -26,12 +26,56 @@ Tema1::~Tema1()
     delete player, enemy;
 }
 
+// Deck generator -- gets a deck from a bunch of predefined decks (i only have one deck now)
+// DEVNOTE: Try to keep very few healers for balancing reasons
+// total: 28 cards  -- TODO: later add x3 Decoy as DECOY type and x2 Commander's Horn as HORN (?) type
+// total strength = 149 - 4
+vector<Card*> Tema1::CreateDeck(const string& name) {
+    if (name == "northernRealms") {
+        return {
+            new Card("Geralt of Rivia", ATK, MELEE, 10),
+            new Card("Ciri", HEAL, MELEE, 7),   // 15
+            new Card("Yennefer of Vengerberg", ATK, RANGED, 7),
+            new Card("Triss Merigold", DEF, RANGED, 3),     // 7
+            new Card("Philippa Eilhart", ATK, RANGED, 6),
+            new Card("Vernon Roche", ATK, MELEE, 8),
+            new Card("John Natalis", DEF, MELEE, 3),        // 10
+            new Card("Esterad Thyssen", ATK, MELEE, 10),
+            new Card("Myserious ELF", HEAL, MELEE, 4), // TODO: turn into spy later // 5
+            new Card("Villentretenmerth", ATK, MELEE, 7),
+            new Card("Catapult", ATK, SIEGE, 8),
+            new Card("Catapult", ATK, SIEGE, 8),
+            new Card("Prince Stennis", DEF, MELEE, 3), // 5 // TODO: turn into spy later
+            new Card("Crinfrid Reavers Dragon Hunter", DEF, RANGED, 3), // 5 // TODO: implement doubling score mechanic for doubles
+            new Card("Crinfrid Reavers Dragon Hunter", DEF, RANGED, 3), // 5
+            new Card("Crinfrid Reavers Dragon Hunter", DEF, RANGED, 3), // 5
+            new Card("Dun Banner Medic", HEAL, SIEGE, 2),       // 5
+            new Card("Sigismund Dijkstra", ATK, MELEE, 6),
+            new Card("Blue Stripes Commando", ATK, MELEE, 4),
+            new Card("Blue Stripes Commando", ATK, MELEE, 4),
+            new Card("Blue Stripes Commando", ATK, MELEE, 4),
+            new Card("Thaler", ATK, SIEGE, 1),   // TODO: turn into spy later
+            //new Card("Clear Weather", CLEAR, ANY, 0),
+            //new Card("Clear Weather", CLEAR, ANY, 0),
+            //new Card("Biting Frost", FROST, MELEE, -1),
+            //new Card("Biting Frost", FROST, MELEE, -1),
+            //new Card("Impenetrable Fog", FROST, RANGED, -1),
+            //new Card("Torrential Rain", FROST, SIEGE, -1)
+        };
+    }
+
+    // shouldn't ever happen 
+    cout << "\nWrong deck name\n";
+    return vector<Card*>();
+}
 
 void Tema1::Init()
 {
 	glm::ivec2 resolution = window->GetResolution();    // get resolution of the window
+    baseRes = glm::vec2(resolution);
+
     auto camera = GetSceneCamera();
-    camera->SetOrthographic(0, (float)resolution.x, 0, (float)resolution.y, 0.01f, 400);
+    camera->SetOrthographic(0, (float)baseRes.x, 0, (float)baseRes.y, 0.01f, 400);
     camera->SetPosition(glm::vec3(0, 0, 50));
     camera->SetRotation(glm::vec3(0, 0, 0));
     camera->Update();
@@ -74,41 +118,13 @@ void Tema1::Init()
 
     // check if mouse is dragging ANY card currently
     isDragging = false;
+    gameOngoing = true;
 
-    // Northern Realms Deck
-    // DEVNOTE: Try to keep very few healers for balancing reasons
-    // total: 22 cards  -- TODO: later add x3 Decoy as DECOY type and x2 Commander's Horn as HORN (?) type
-    // total strength = 149
-    vector<Card*> northernRealms = {
-        new Card("Geralt of Rivia", ATK, MELEE, 10),
-        new Card("Ciri", HEAL, MELEE, 4),   // 15
-        new Card("Yennefer of Vengerberg", ATK, RANGED, 7),
-        new Card("Triss Merigold", DEF, RANGED, 3),     // 7
-        new Card("Philippa Eilhart", ATK, RANGED, 6),
-        new Card("Vernon Roche", ATK, MELEE, 8),
-        new Card("John Natalis", DEF, MELEE, 4),        // 10
-        new Card("Esterad Thyssen", ATK, MELEE, 10),
-        new Card("Myserious ELF", HEAL, MELEE, 2), // TODO: turn into spy later // 5
-        new Card("Villentretenmerth", ATK, MELEE, 7),
-        new Card("Catapult", ATK, SIEGE, 8),
-        new Card("Catapult", ATK, SIEGE, 8),
-        new Card("Prince Stennis", DEF, MELEE, 3), // 5 // TODO: turn into spy later
-        new Card("Crinfrid Reavers Dragon Hunter", DEF, RANGED, 2), // 5 // TODO: implement doubling score mechanic for doubles
-        new Card("Crinfrid Reavers Dragon Hunter", DEF, RANGED, 2), // 5
-        new Card("Crinfrid Reavers Dragon Hunter", DEF, RANGED, 2), // 5
-        new Card("Dun Banner Medic", HEAL, SIEGE, 2),       // 5
-        new Card("Sigismund Dijkstra", DEF, MELEE, 4),
-        new Card("Blue Stripes Commando", ATK, MELEE, 4),
-        new Card("Blue Stripes Commando", ATK, MELEE, 4),
-        new Card("Blue Stripes Commando", ATK, MELEE, 4),
-        new Card("Thaler", ATK, SIEGE, 1)   // TODO: turn into spy later
-    };
-
-    playerDeck = northernRealms;    // might be able to remove
+    //playerDeck = northernRealms;    // might be able to remove
 
     // TODO: as-is im pretty sure both players compute the same instance of the deck, i want each player with a different deck
-    player = new Player(true, northernRealms);
-    enemy = new Player(false, northernRealms);
+    player = new Player(true, CreateDeck("northernRealms"));
+    enemy = new Player(false, CreateDeck("northernRealms"));
 
     // player lanes
     Mesh* playerSquare = object2D::CreateSquare("playerSquare", corner, squareSide, glm::vec3(6 / 255.f, 115 / 255.f, 145 / 255.f), true);  // cyan
@@ -125,11 +141,26 @@ void Tema1::Init()
 
     Mesh* fullHpTile = object2D::CreateSquare("fullHpTile", corner, squareSide, glm::vec3(0, 1, 0), true);
     AddMeshToList(fullHpTile);
-
-    Mesh* emptyHpTile = object2D::CreateSquare("emptyHpTile", corner, squareSide, glm::vec3(0, 1, 0), true);
+        
+    Mesh* emptyHpTile = object2D::CreateSquare("emptyHpTile", corner, squareSide, glm::vec3(77 / 255.f, 89 / 255.f, 92 / 255.f), true); // light-ish gray
     AddMeshToList(emptyHpTile);
 
+    Mesh* playerWonRoundUI = object2D::CreateShield("playerWonRoundUI", corner, squareSide, glm::vec3(10 / 255.f, 152 / 255.f, 191 / 255.f), true); // lighter cyan
+    AddMeshToList(playerWonRoundUI);
+
+    Mesh* emptyWonRoundUI = object2D::CreateShield("emptyWonRoundUI", corner, squareSide, glm::vec3(77 / 255.f, 89 / 255.f, 92 / 255.f), true); // light-ish gray
+    AddMeshToList(emptyWonRoundUI);
+
     playerLanes = vector<Lane*>();
+
+    Mesh* melee = object2D::CreateTriangle("melee", corner, squareSide, glm::vec3(230 / 255.f, 214 / 255.f, 41 / 255.f), true); // Yellow
+    AddMeshToList(melee);
+
+    Mesh* ranged = object2D::CreateSquare("ranged", corner, squareSide, glm::vec3(230 / 255.f, 214 / 255.f, 41 / 255.f), true); // Yellow
+    AddMeshToList(ranged);
+
+    Mesh* siege = object2D::CreatePentagon("siege", corner, squareSide, glm::vec3(230 / 255.f, 214 / 255.f, 41 / 255.f), true); // Yellow
+    AddMeshToList(siege);
 
     // init hand, set size and pos and drawn cards in hand
 	Hand = new Lane("Hand", true, &playerTurn, playerHandLane);
@@ -154,9 +185,11 @@ void Tema1::Init()
         Mesh* tempCard;
 
         switch (player->hand[i]->action) {                                    // i still dont really get why i need 3 coords to create a 2D square -- glm::vec3(playerHand[i]->pos, 0)
-        case ATK: tempCard = object2D::CreateSquare(player->hand[i]->name, corner, cardSize, glm::vec3(163 / 255.f, 0, 0), true); break;  // red
-        case DEF: tempCard = object2D::CreateSquare(player->hand[i]->name, corner, cardSize, glm::vec3(0 / 255.f, 170 / 255.f, 217 / 255.f), true); break;  // blue
-        case HEAL: tempCard = object2D::CreateSquare(player->hand[i]->name, corner, cardSize, glm::vec3(10 / 255.f, 125 / 255.f, 41 / 255.f), true); break; // green
+            case ATK: tempCard = object2D::CreateSquare(player->hand[i]->name, corner, cardSize, glm::vec3(163 / 255.f, 0, 0), true); break;  // red
+            case DEF: tempCard = object2D::CreateSquare(player->hand[i]->name, corner, cardSize, glm::vec3(0 / 255.f, 170 / 255.f, 217 / 255.f), true); break;  // blue
+            case HEAL: tempCard = object2D::CreateSquare(player->hand[i]->name, corner, cardSize, glm::vec3(10 / 255.f, 125 / 255.f, 41 / 255.f), true); break; // green
+            //case CLEAR: tempCard = object2D::CreateSquare(player->hand[i]->name, corner, cardSize, glm::vec3(227 / 255.f, 166 / 255.f, 0 / 255.f), true); break;    // golden
+            //case FROST: tempCard = object2D::CreateSquare(player->hand[i]->name, corner, cardSize, glm::vec3(1, 1, 1), true); break;    // white
         }
         AddMeshToList(tempCard);
     }
@@ -165,9 +198,11 @@ void Tema1::Init()
         Mesh* tempCard;
 
         switch (enemy->hand[i]->action) {                                    // i still dont really get why i need 3 coords to create a 2D square -- glm::vec3(playerHand[i]->pos, 0)
-        case ATK: tempCard = object2D::CreateSquare(enemy->hand[i]->name, corner, cardSize, glm::vec3(163 / 255.f, 0, 0), true); break;  // red
-        case DEF: tempCard = object2D::CreateSquare(enemy->hand[i]->name, corner, cardSize, glm::vec3(0 / 255.f, 170 / 255.f, 217 / 255.f), true); break;    // blue
-        case HEAL: tempCard = object2D::CreateSquare(enemy->hand[i]->name, corner, cardSize, glm::vec3(10 / 255.f, 125 / 255.f, 41 / 255.f), true); break;   // green
+            case ATK: tempCard = object2D::CreateSquare(enemy->hand[i]->name, corner, cardSize, glm::vec3(163 / 255.f, 0, 0), true); break;  // red
+            case DEF: tempCard = object2D::CreateSquare(enemy->hand[i]->name, corner, cardSize, glm::vec3(0 / 255.f, 170 / 255.f, 217 / 255.f), true); break;    // blue
+            case HEAL: tempCard = object2D::CreateSquare(enemy->hand[i]->name, corner, cardSize, glm::vec3(10 / 255.f, 125 / 255.f, 41 / 255.f), true); break;   // green
+            //case CLEAR: tempCard = object2D::CreateSquare(enemy->hand[i]->name, corner, cardSize, glm::vec3(227 / 255.f, 166 / 255.f, 0 / 255.f), true); break;    // golden
+            //case FROST: tempCard = object2D::CreateSquare(enemy->hand[i]->name, corner, cardSize, glm::vec3(1, 1, 1), true); break;    // white
         }
         AddMeshToList(tempCard);
     }
@@ -177,6 +212,9 @@ void Tema1::Init()
 
     Mesh* laneOutline = object2D::CreateSquare("laneOutline", corner, squareSide, glm::vec3(23 / 255.f, 23 / 255.f, 23 / 255.f), false); // dark gray
     AddMeshToList(laneOutline);
+
+    Mesh* outlineWonRoundUI = object2D::CreateShield("outlineWonRoundUI", corner, squareSide, glm::vec3(23 / 255.f, 23 / 255.f, 23 / 255.f), false); // light-ish gray
+    AddMeshToList(outlineWonRoundUI);
 
 	Lane* melee1 = new Lane("melee", true, &playerTurn, playerSquare);
     Lane* range1 = new Lane("ranged", true, &playerTurn, playerSquare);
@@ -191,6 +229,9 @@ void Tema1::Init()
 	// enemy lanes
 	Mesh* enemySquare = object2D::CreateSquare("enemySquare", corner, squareSide, glm::vec3(112 / 255.f, 13 / 255.f, 2 / 255.f), true);
 	AddMeshToList(enemySquare);
+
+    Mesh* enemyWonRoundUI = object2D::CreateShield("enemyWonRoundUI", corner, squareSide, glm::vec3(112 / 255.f, 13 / 255.f, 2 / 255.f), true);
+    AddMeshToList(enemyWonRoundUI);
 
     enemyLanes = vector<Lane*>();
 
@@ -218,11 +259,15 @@ void Tema1::Init()
  // method to get 10 random cards from deck
 void Tema1::DrawCards(Player* p, int count) {
     //Hand->getSize();
+    int drawnAtk = 0;
     for (int i = 0; i < count; i++) {
         int id;
-        do    // draw until you get card that was not drawn yet
+        bool needAtk = (i < 5);
+
+        do {  // draw until you get card that was not drawn yet
             id = rand() % p->deck.size();
-        while (p->deck[id]->wasDrawn);
+        }
+        while (p->deck[id]->wasDrawn || (needAtk && p->deck[id]->action != ATK));
 
         p->deck[id]->wasDrawn = true;    // drawn meaning picked
         p->hand.push_back(p->deck[id]);
@@ -314,6 +359,7 @@ void Tema1::Update(float deltaTimeSeconds)
             }
         }
 
+        enemy->roundScore = glm::vec3(0);
         for (Lane* lane : enemyLanes) {
             enemy->roundScore += lane->computeScores();
         }
@@ -326,15 +372,37 @@ void Tema1::Update(float deltaTimeSeconds)
         
         checkRoundEnd();
 
-        cout << "\nNow it's your turn! Place a card or three!\n";
+        if (player->roundsWon == 2 || enemy->roundsWon == 2 || !gameOngoing) {
+            // one last call to update roundsWonUI
+
+            auto camera = GetSceneCamera();
+            camera->SetOrthographic(0, (float)baseRes.x, 0, (float)baseRes.y, 0.01f, 400);
+            camera->SetPosition(glm::vec3(0, 0, 50));
+            camera->SetRotation(glm::vec3(0, 0, 0));
+            camera->Update();
+        }
+        else
+            cout << "\nNow it's your turn! Place a card or three!\n";
     }
 
     // render cards in Hand
     for (int i = 0; i < player->hand.size(); i++) {
+        {
+            // draw icon
+            modelMatrix = glm::mat3(1);
+
+            modelMatrix *= transform2D::Translate(player->hand[i]->pos.x, player->hand[i]->pos.y);
+
+            modelMatrix *= transform2D::Translate(cx / 2 + 1.85f, cy / 2);
+            modelMatrix *= transform2D::Scale(laneIconSize, laneIconSize);
+            //modelMatrix *= transform2D::Translate(-cx, -cy);
+
+            RenderMesh2D(meshes[player->hand[i]->type], shaders["VertexColor"], modelMatrix);
+        }
+
         modelMatrix = glm::mat3(1);
 
         modelMatrix *= transform2D::Translate(player->hand[i]->pos.x, player->hand[i]->pos.y);
-
         modelMatrix *= transform2D::Translate(cx, cy);
         modelMatrix *= transform2D::Scale(1, 1.5f);
         modelMatrix *= transform2D::Translate(-cx, -cy);
@@ -349,7 +417,26 @@ void Tema1::Update(float deltaTimeSeconds)
 
     // render cards on player lanes
     for (int l = 0; l < playerLanes.size(); l++) {
+        modelMatrix = glm::mat3(1);
+
+        modelMatrix *= transform2D::Translate(playerLanes[l]->pos.x + 20, playerLanes[l]->pos.y + playerLanes[l]->height / 4);
+        modelMatrix *= transform2D::Scale(laneIconSize * 2, laneIconSize * 2);
+        RenderMesh2D(meshes[playerLanes[l]->type], shaders["VertexColor"], modelMatrix);
+
         for (int i = 0; i < playerLanes[l]->cards.size(); i++) {
+            {
+                // draw icon
+                modelMatrix = glm::mat3(1);
+
+                modelMatrix *= transform2D::Translate(playerLanes[l]->cards[i]->pos.x, playerLanes[l]->cards[i]->pos.y);
+
+                modelMatrix *= transform2D::Translate(cx / 2 + 1.85f, cy / 2);
+                modelMatrix *= transform2D::Scale(laneIconSize, laneIconSize);
+                //modelMatrix *= transform2D::Translate(-cx, -cy);
+
+                RenderMesh2D(meshes[playerLanes[l]->cards[i]->type], shaders["VertexColor"], modelMatrix);
+            }
+
             modelMatrix = glm::mat3(1);
 
             modelMatrix *= transform2D::Translate(playerLanes[l]->cards[i]->pos.x, playerLanes[l]->cards[i]->pos.y);
@@ -369,7 +456,26 @@ void Tema1::Update(float deltaTimeSeconds)
 
     // render cards on enemy lanes
     for (int l = 0; l < enemyLanes.size(); l++) {
+        modelMatrix = glm::mat3(1);
+
+        modelMatrix *= transform2D::Translate(enemyLanes[l]->pos.x + 20, enemyLanes[l]->pos.y + enemyLanes[l]->height / 4);
+        modelMatrix *= transform2D::Scale(laneIconSize * 2, laneIconSize * 2);
+        RenderMesh2D(meshes[playerLanes[l]->type], shaders["VertexColor"], modelMatrix);
+
         for (int i = 0; i < enemyLanes[l]->cards.size(); i++) {
+            {
+                // draw icon
+                modelMatrix = glm::mat3(1);
+
+                modelMatrix *= transform2D::Translate(enemyLanes[l]->cards[i]->pos.x, enemyLanes[l]->cards[i]->pos.y);
+
+                modelMatrix *= transform2D::Translate(cx / 2 + 1.85f, cy / 2);
+                modelMatrix *= transform2D::Scale(laneIconSize, laneIconSize);
+                //modelMatrix *= transform2D::Translate(-cx, -cy);
+
+                RenderMesh2D(meshes[enemyLanes[l]->cards[i]->type], shaders["VertexColor"], modelMatrix);
+            }
+
             modelMatrix = glm::mat3(1);
 
             modelMatrix *= transform2D::Translate(enemyLanes[l]->cards[i]->pos.x, enemyLanes[l]->cards[i]->pos.y);
@@ -431,10 +537,32 @@ void Tema1::Update(float deltaTimeSeconds)
 
 
     // render player hp
-    for (int i = 0; i < player->maxHP / 5; i++) {
-        for (int j = 0; j < 5; j++) {
+    int rowCount = rowCount = player->maxHP / 5 + (player->maxHP % 5 == 0 ? 0 : 1);
+    {
+        int tileCount = 0;
+
+        for (int i = 0; i < player->maxHP / 5; i++) {
+            for (int j = 0; j < 5; j++) {
+                modelMatrix = glm::mat3(1);
+                modelMatrix *= transform2D::Translate(resolution.x / 100 + hpTileWidth * (j + 1), hpTileHeight * i + Hand->height + 20);
+                modelMatrix *= transform2D::Scale(hpTileWidth, hpTileHeight);
+
+                // make outline a little thicker
+                glLineWidth(2);
+                RenderMesh2D(meshes["laneOutline"], shaders["VertexColor"], modelMatrix);
+                glLineWidth(1.0f);
+
+                if (tileCount < player->hp)
+                    RenderMesh2D(meshes["fullHpTile"], shaders["VertexColor"], modelMatrix);
+
+                tileCount++;
+            }
+        }
+
+        // render remaining hp tiles if maxHP !/ 5
+        for (int k = 0; k < player->maxHP % 5; k++) {
             modelMatrix = glm::mat3(1);
-            modelMatrix *= transform2D::Translate(resolution.x / 100 + hpTileWidth * (j + 1), hpTileHeight * i + Hand->height + resolution.y / 70);
+            modelMatrix *= transform2D::Translate(resolution.x / 100 + hpTileWidth * (k + 1), player->maxHP / 5 * hpTileHeight + Hand->height + 20);
             modelMatrix *= transform2D::Scale(hpTileWidth, hpTileHeight);
 
             // make outline a little thicker
@@ -442,30 +570,125 @@ void Tema1::Update(float deltaTimeSeconds)
             RenderMesh2D(meshes["laneOutline"], shaders["VertexColor"], modelMatrix);
             glLineWidth(1.0f);
 
-            if (i * 5 + j < player->hp) 
+            if (tileCount < player->hp)
                 RenderMesh2D(meshes["fullHpTile"], shaders["VertexColor"], modelMatrix);
+            
+            tileCount++;
         }
     }
 
-    for (int k = 0; k < player->maxHP % 5; k++) {
+    // render player wonRounds UI
+    {
         modelMatrix = glm::mat3(1);
-        modelMatrix *= transform2D::Translate(resolution.x / 100 + hpTileWidth * (k + 1), player->maxHP / 5 * hpTileHeight + Hand->height + resolution.y / 70);
-        modelMatrix *= transform2D::Scale(hpTileWidth, hpTileHeight);
+        modelMatrix *= transform2D::Translate(resolution.x / 100 + 4.85f * hpTileWidth, Hand->height + wonRoundSize + (rowCount - 1) * hpTileHeight);
+        //modelMatrix *= transform2D::Translate(100 * (i + 1), 100);
+        modelMatrix *= transform2D::Scale(wonRoundSize, wonRoundSize);
 
         // make outline a little thicker
         glLineWidth(2);
-        RenderMesh2D(meshes["laneOutline"], shaders["VertexColor"], modelMatrix);
+        RenderMesh2D(meshes["outlineWonRoundUI"], shaders["VertexColor"], modelMatrix);
         glLineWidth(1.0f);
 
-        if (player->maxHP / 5 + k < player->hp)
-            RenderMesh2D(meshes["fullHpTile"], shaders["VertexColor"], modelMatrix);
+        if (player->roundsWon == 2)
+            RenderMesh2D(meshes["playerWonRoundUI"], shaders["VertexColor"], modelMatrix);
+        else
+            RenderMesh2D(meshes["emptyWonRoundUI"], shaders["VertexColor"], modelMatrix);
+
+        modelMatrix = glm::mat3(1);
+        modelMatrix *= transform2D::Translate(resolution.x / 100 + 4.85f * hpTileWidth - 5 - wonRoundSize, Hand->height + wonRoundSize + (rowCount - 1) * hpTileHeight);
+        //modelMatrix *= transform2D::Translate(100 * (i + 1), 100);
+        modelMatrix *= transform2D::Scale(wonRoundSize, wonRoundSize);
+
+        // make outline a little thicker
+        glLineWidth(2);
+        RenderMesh2D(meshes["outlineWonRoundUI"], shaders["VertexColor"], modelMatrix);
+        glLineWidth(1.0f);
+        
+        if (player->roundsWon >= 1)
+            RenderMesh2D(meshes["playerWonRoundUI"], shaders["VertexColor"], modelMatrix);
+        else
+            RenderMesh2D(meshes["emptyWonRoundUI"], shaders["VertexColor"], modelMatrix);
+    }
+
+    // render enemy hp
+    {
+        int tileCount = 0;
+
+        for (int i = 0; i < player->maxHP / 5; i++) {
+            for (int j = 0; j < 5; j++) {
+                modelMatrix = glm::mat3(1);
+                modelMatrix *= transform2D::Translate(resolution.x / 100 + hpTileWidth * (j + 1), hpTileHeight * i + enemyLanes[0]->pos.y + 20);
+                modelMatrix *= transform2D::Scale(hpTileWidth, hpTileHeight);
+
+                // make outline a little thicker
+                glLineWidth(2);
+                RenderMesh2D(meshes["laneOutline"], shaders["VertexColor"], modelMatrix);
+                glLineWidth(1.0f);
+
+                if (tileCount < enemy->hp)
+                    RenderMesh2D(meshes["fullHpTile"], shaders["VertexColor"], modelMatrix);
+            
+                tileCount++;
+            }
+        }
+
+        // render remaining hp tiles if maxHP !/ 5
+        for (int k = 0; k < player->maxHP % 5; k++) {
+            modelMatrix = glm::mat3(1);
+            modelMatrix *= transform2D::Translate(resolution.x / 100 + hpTileWidth * (k + 1), player->maxHP / 5 * hpTileHeight + enemyLanes[0]->pos.y + 20);
+            modelMatrix *= transform2D::Scale(hpTileWidth, hpTileHeight);
+
+            // make outline a little thicker
+            glLineWidth(2);
+            RenderMesh2D(meshes["laneOutline"], shaders["VertexColor"], modelMatrix);
+            glLineWidth(1.0f);
+
+            if (tileCount < enemy->hp)
+                RenderMesh2D(meshes["fullHpTile"], shaders["VertexColor"], modelMatrix);
+
+            tileCount++;
+        }
+    }
+
+    // render enemy wonRounds UI
+    {
+        modelMatrix = glm::mat3(1);
+        modelMatrix *= transform2D::Translate(resolution.x / 100 + 4.85f * hpTileWidth, enemyLanes[0]->pos.y + wonRoundSize + (rowCount - 1) * hpTileHeight);
+        //modelMatrix *= transform2D::Translate(100 * (i + 1), 100);
+        modelMatrix *= transform2D::Scale(wonRoundSize, wonRoundSize);
+
+        // make outline a little thicker
+        glLineWidth(2);
+        RenderMesh2D(meshes["outlineWonRoundUI"], shaders["VertexColor"], modelMatrix);
+        glLineWidth(1.0f);
+
+        if (enemy->roundsWon == 2)
+            RenderMesh2D(meshes["enemyWonRoundUI"], shaders["VertexColor"], modelMatrix);
+        else
+            RenderMesh2D(meshes["emptyWonRoundUI"], shaders["VertexColor"], modelMatrix);
+
+        modelMatrix = glm::mat3(1);
+        modelMatrix *= transform2D::Translate(resolution.x / 100 + 4.85f * hpTileWidth - 5 - wonRoundSize, enemyLanes[0]->pos.y + wonRoundSize + (rowCount - 1) * hpTileHeight);
+        //modelMatrix *= transform2D::Translate(100 * (i + 1), 100);
+        modelMatrix *= transform2D::Scale(wonRoundSize, wonRoundSize);
+
+        // make outline a little thicker
+        glLineWidth(2);
+        RenderMesh2D(meshes["outlineWonRoundUI"], shaders["VertexColor"], modelMatrix);
+        glLineWidth(1.0f);
+
+
+        if (enemy->roundsWon >= 1)
+            RenderMesh2D(meshes["enemyWonRoundUI"], shaders["VertexColor"], modelMatrix);
+        else
+            RenderMesh2D(meshes["emptyWonRoundUI"], shaders["VertexColor"], modelMatrix);
     }
 
     // render board
     modelMatrix = glm::mat3(1);
     //modelMatrix *= transform2D::Translate(barWidth + offset, offset); // move pivot to bottom right
     //modelMatrix *= transform2D::Translate(offset, offset);
-    modelMatrix *= transform2D::Scale(resolution.x, resolution.y);
+    modelMatrix *= transform2D::Scale(baseRes.x, baseRes.y);
     //modelMatrix *= transform2D::Translate(-1, 0);   // move pivot back (original squareSide = 1, NOT barWidth) -- doesnt do anything rn
 
     RenderMesh2D(meshes["statsBar"], shaders["VertexColor"], modelMatrix);
@@ -499,12 +722,14 @@ void Tema1::checkRoundEnd() {
     // check if 2 turns where played - if so, compare scores
     if (turnsPlayed == 0) {
 
+        // enemy atk
         // decrease enemy damage with player defence
         if (enemy->roundScore.x - player->roundScore.y >= 0)
             enemy->roundScore.x -= player->roundScore.y;
         else
             enemy->roundScore.x = 0;
 
+        // player atk
         // decrease player damage with enemy defence
         if (player->roundScore.x - enemy->roundScore.y >= 0)
             player->roundScore.x -= enemy->roundScore.y;
@@ -512,28 +737,79 @@ void Tema1::checkRoundEnd() {
             player->roundScore.x = 0;
 
 
+        // enemy def
         if (enemy->hp - player->roundScore.x >= 0)
             enemy->hp -= player->roundScore.x;  // decrease enemy hp with remaining player damage
-        else {
+        else
             enemy->hp = 0;
-            player->roundsWon++;
-        }
 
+        // player def
         if (player->hp - enemy->roundScore.x >= 0)
             player->hp -= enemy->roundScore.x;
-        else {
+        else
             player->hp = 0;
-            enemy->roundsWon++;
-        }
 
-        if (enemy->hp > 0)
-            enemy->hp += enemy->roundScore.z;   // heal
 
+        // enemy heal
         if (enemy->hp > 0)
-            player->hp += player->roundScore.z;
+            if (enemy->hp + enemy->roundScore.z <= enemy->maxHP)
+                enemy->hp += enemy->roundScore.z;
+            else
+                enemy->hp = enemy->maxHP;
+
+        // player heal
+        if (player->hp > 0)
+            if (player->hp + player->roundScore.z <= player->maxHP)
+                player->hp += player->roundScore.z;
+            else
+                player->hp = player->maxHP;
 
         cout << "\nPlayer HP is now " << player->hp << "\nEnemy HP is now " << enemy->hp << "\n";
-        
+
+        // tie-breaker
+        if (player->hp == 0 && enemy->hp == 0) {
+            if (enemy->roundScore.x > player->roundScore.x) // enemy wins
+                enemy->roundsWon++;
+            else
+                if (enemy->roundScore.x == player->roundScore.x) { // tie
+                    player->roundsWon++;
+                    enemy->roundsWon++;
+                }
+                else
+                    player->roundsWon++; // player wins
+        }
+        else // general cases
+            if (enemy->hp == 0)
+                player->roundsWon++;
+            else
+                if (player->hp == 0)
+                    enemy->roundsWon++;
+
+        // if out of cards
+        if (player->hand.size() == 0) {
+            if (enemy->hand.size() > 0) {
+                enemy->roundsWon++;
+            }   // both ran out of cards
+            else {
+                if (enemy->hp > player->hp)
+                    enemy->roundsWon++;
+                else 
+                    if (enemy->hp < player->hp)
+                        player->roundsWon++;
+                    else {
+                        if (enemy->roundsWon > player->roundsWon)
+                            enemy->roundsWon++;
+                        else
+                            if (enemy->roundsWon < player->roundsWon)
+                                player->roundsWon++;
+                            else {
+                                enemy->roundsWon++;
+                                player->roundsWon++;
+                            }
+                    }
+            }
+        }
+
 
         // reset stats after applying effects
         for (Lane* lane : playerLanes)
@@ -542,9 +818,48 @@ void Tema1::checkRoundEnd() {
         for (Lane* lane : enemyLanes)
             lane->resetStats();
 
+        // reset roundScore after clash PLEASE
         player->roundScore = glm::vec3(0);
         enemy->roundScore = glm::vec3(0);
+
+        if (enemy->roundsWon == 2 && player->roundsWon == 2) {
+            // TODO: play again on key P
+            cout << "\nTie!\n";
+            gameOngoing = false;
+            return;
+        }
+
+        if (enemy->roundsWon == 2) {
+            // TODO: play again on key P
+            cout << "\nEnemy won the game!\n";
+            gameOngoing = false;
+            return;
+        } 
+        else {
+            if (player->roundsWon == 2) {
+                // TODO: play again on key P
+                cout << "\nYou won the game!\n";
+                gameOngoing = false;
+                return;
+            }
+            else 
+                if (player->hp == 0 || enemy->hp == 0) {
+                    cout << "Round ended. Reseting board...";
+                    startRound();
+                }
+        }
     }
+}
+
+void Tema1::startRound() {
+    for (Lane* lane : playerLanes)
+        lane->clearLane();
+
+    for (Lane* lane : enemyLanes)
+        lane->clearLane();
+
+    player->hp = player->maxHP;
+    enemy->hp = enemy->maxHP;
 }
 
 void Tema1::OnKeyPress(int key, int mods)
@@ -559,10 +874,14 @@ void Tema1::OnKeyPress(int key, int mods)
     // end player turn
     if (key == GLFW_KEY_ENTER)
     {
+        if (!gameOngoing)
+            return;
+
         playerTurn = !playerTurn;
         player->cardsPlayed = 0;
         //enemy->cardsPlayed = 0;
 
+        player->roundScore = glm::vec3(0);
         for (Lane* lane : playerLanes) {
             player->roundScore += lane->computeScores();
         }
@@ -600,6 +919,9 @@ void Tema1::OnMouseMove(int mouseX, int mouseY, int deltaX, int deltaY)
 
 void Tema1::OnMouseBtnPress(int mouseX, int mouseY, int button, int mods)
 {
+    if (!gameOngoing)
+        return;
+
     if (playerTurn == false) {
         cout << "It's not your turn yet!\n";
         return;
@@ -651,7 +973,7 @@ void Tema1::OnMouseBtnPress(int mouseX, int mouseY, int button, int mods)
                 for (int i = 0; i < playerLanes[l]->cards.size(); i++) {
                     if ((mouseX >= playerLanes[l]->cards[i]->pos.x && mouseX <= playerLanes[l]->cards[i]->pos.x + cardSize
                         && mouseY >= playerLanes[l]->cards[i]->pos.y && mouseY <= playerLanes[l]->cards[i]->pos.y + cardSize
-                        && !playerLanes[l]->cards[i]->isDragged) && playerLanes[l]->cards[i]->used) {
+                        && !playerLanes[l]->cards[i]->isDragged) && playerLanes[l]->cards[i]->used && playerLanes[l]->cards[i]->returnable) {
 
                         cout << "Moving " << player->hand[i]->name << "back to hand\n";
                             

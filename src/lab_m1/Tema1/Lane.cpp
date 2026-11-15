@@ -129,13 +129,33 @@ void Lane::removeCard(Card* card) {
 }
 
 glm::vec3 Lane::computeScores() {
+	this->laneAtk = 0;
+	this->laneDef = 0;
+	this->laneHeal = 0;
+
+	// n-am prea inteles care e faza cu "Efectele se aplica la fiecare tura"
+	// acum se aplica ATK 1 tura, DEF 3 ture, HEAL 1 tura
+	// daca e vorba sa se aplice aceleasi efecte la fiecare tura perpetuu:
+	// 1. e broken pt ca geralt da 10 dmg si poti face stack la shields fiind virtual unbeatable
+	// 2. tot ce tb sa fac e sa sterg && card->turnsActive != 0 si eventual card->turnsActive--; 
+	// din fiecare rand de aici
+	// pls give 5 puncte :,)
 	for (Card* card : cards) {
-		if (card->action == ATK)
-			laneAtk = card->value;
-		if (card->action == DEF)
-			laneDef = card->value;
-		if (card->action == HEAL)
-			laneHeal = card->value;
+		if (card->action == ATK && card->turnsActive != 0) {
+			laneAtk += card->value;
+			card->turnsActive--;
+		}
+
+		if (card->action == DEF && card->turnsActive != 0) {
+			laneDef += card->value;
+			card->turnsActive--;
+			//card->scored = true;	// UNCOMMENT if you want to not keep def scores over turns
+		}
+
+		if (card->action == HEAL && card->turnsActive != 0) {
+			laneHeal += card->value;
+			card->turnsActive--;
+		}
 	}
 
 	return glm::vec3(laneAtk, laneDef, laneHeal);
@@ -167,6 +187,18 @@ void Lane::printCards() {
 
 void Lane::resetStats() {
 	this->laneAtk = 0;
-	//this->laneDef = 0;	// def should probably remain turn by turn
+	this->laneDef = 0;	// def should probably remain turn by turn
+	this->laneHeal = 0;
+
+	for (Card* card : this->cards) {
+		card->returnable = false;
+	}
+}
+
+void Lane::clearLane() {
+	this->cards.clear();
+
+	this->laneAtk = 0;
+	this->laneDef = 0;
 	this->laneHeal = 0;
 }

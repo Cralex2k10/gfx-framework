@@ -28,6 +28,17 @@ Card::Card(const std::string& name, cardAction action, cardType type, int value)
 	this->value = value;
 	this->wasDrawn = false;
 	this->used = false;	// allows the card to be selected from the deck only once	
+	
+	this->scored = false;	// obsollette i think
+	this->returnable = true;
+	
+	// how many turns a card can apply it's efect on the opponent
+	switch (this->action) {
+		case ATK: this->turnsActive = 1; break;
+		case DEF: this->turnsActive = 3; break;
+		case HEAL: this->turnsActive = 1; break;
+	}
+
 	// TODO change to update automatically on lane sort
 	// no need to attribute lane on create.
 	this->pos = glm::vec2(0, 0);
