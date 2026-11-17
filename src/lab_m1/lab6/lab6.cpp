@@ -191,8 +191,13 @@ void Lab6::RenderSimpleMesh(Mesh *mesh, Shader *shader, const glm::mat4 & modelM
     if (!mesh || !shader || !shader->GetProgramID())
         return;
 
+    double time = Engine::GetElapsedTime();
+
     // Render an object using the specified shader and the specified position
     glUseProgram(shader->program);
+
+    int timeLoc = glGetUniformLocation(shader->GetProgramID(), "Time");
+    glUniform1f(timeLoc, time);
 
     // TODO(student): Get shader location for uniform mat4 "Model"
     int locModel = glGetUniformLocation(shader->GetProgramID(), "Model");

@@ -55,8 +55,8 @@ vector<Card*> Tema1::CreateDeck(const string& name) {
             new Card("Blue Stripes Commando", ATK, MELEE, 4),
             new Card("Blue Stripes Commando", ATK, MELEE, 4),
             new Card("Thaler", ATK, SIEGE, 1),   // TODO: turn into spy later
-            //new Card("Clear Weather", CLEAR, ANY, 0),
-            //new Card("Clear Weather", CLEAR, ANY, 0),
+            new Card("Clear Weather", CLEAR, ANY, 0),
+            new Card("Clear Weather", CLEAR, ANY, 0),
             new Card("Biting Frost", FROST, MELEE, -1),
             new Card("Biting Frost", FROST, MELEE, -1),
             new Card("Impenetrable Fog", FROST, RANGED, -1),
