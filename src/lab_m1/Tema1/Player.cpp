@@ -3,9 +3,6 @@
 #include <vector>
 #include <iostream>
 
-#include "lab_m1/lab3/transform2D.h"
-#include "lab_m1/lab3/object2D.h"
-
 using namespace m1;
 using namespace std;
 

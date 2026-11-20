@@ -15,6 +15,6 @@ void main()
     // TODO(student): Write pixel out color
 
     //out_position = vec4(frag_position, 1);
-    out_color = vec4(frag_normal, 1);   // change back to color for Time variation
+    out_color = vec4(frag_color, 1);   // change back to color for Time variation
     //out_normal = vec4(frag_normal, 1);
 }
